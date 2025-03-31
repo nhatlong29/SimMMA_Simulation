@@ -45,7 +45,7 @@ for(nA in nA_range){
     ulim = Inf
     E2 = integrate(function(m) { 
                    sapply(m, function(m) {
-                            integrate(function(z) myfun(z,m), llim, ulim)$value})
+                            integrate(function(z) fun.s2(z,m), llim, ulim)$value})
             }, llim, ulim)$value
     (E2)
     ### test
@@ -53,7 +53,7 @@ for(nA in nA_range){
     fun.s0 = function(z,m) (gamma0 + gamma1 + gamma2*z + gamma3*m)*dnorm(z,alp0 + alp1,1)*dnorm(m,beta0 + beta1 + beta2*z,1)
     E0.test = integrate(function(m) { 
                sapply(m, function(m) {
-                        integrate(function(z) myfun(z,m), llim, ulim)$value})
+                        integrate(function(z) fun.s0(z,m), llim, ulim)$value})
         }, llim, ulim)$value
     (E0.test)
     (E0)
