@@ -39,14 +39,31 @@ for(nA in nA_range){
         bind_rows(., data.frame(E0, E1, E2, E3, E4))
 
     # Product of coefficient
+    ### suggested
+    fun.s2 = function(z,m) (gamma0 + gamma2*z + gamma3*m)*dnorm(z,alp0,1)*dnorm(m,beta0 + beta1 + beta2*(z+alp1),1)
+    llim = -Inf
+    ulim = Inf
+    E2 = integrate(function(m) { 
+                   sapply(m, function(m) {
+                            integrate(function(z) myfun(z,m), llim, ulim)$value})
+            }, llim, ulim)$value
+    (E2)
+    ### test
+    E0 = gamma0 + gamma1 + gamma2*(alp0 + alp1) + gamma3*(beta0 + beta1) + gamma3*beta2*(alp0 + alp1)
+    fun.s0 = function(z,m) (gamma0 + gamma1 + gamma2*z + gamma3*m)*dnorm(z,alp0 + alp1,1)*dnorm(m,beta0 + beta1 + beta2*z,1)
+    E0.test = integrate(function(m) { 
+               sapply(m, function(m) {
+                        integrate(function(z) myfun(z,m), llim, ulim)$value})
+        }, llim, ulim)$value
+    (E0.test)
+    (E0)
 }
-
 
 E_df
 
-
-
 E_df = bind_rows(E_df, data.frame(E0 = 0, E1 = 1, E2=2,E3=3,E4=4))
+
+
 
 
 
