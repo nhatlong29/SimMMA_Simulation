@@ -41,11 +41,6 @@ for(nA in nA_range){
     # Product of coefficient
 }
 
-
-E_df
-
-
-
 E_df = bind_rows(E_df, data.frame(E0 = 0, E1 = 1, E2=2,E3=3,E4=4))
 
 
