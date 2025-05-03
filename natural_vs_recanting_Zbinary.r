@@ -60,14 +60,14 @@ eps = list(c(NaN, NaN), c(0, 1), c(0, 1))
 # 1. Changing gamma[7]
 
 gamma7 = c(-4, -3, -0.5, 1, 1.5)
-result = data.frame(AZY_ne_re = c(), AZMY_ne_re = c())
+result = data.frame(value = c(), AZY_ne_re = c(), AZMY_ne_re = c())
 
 for(gamma7 in gamma7){
   gamma[7] = gamma7
   res = generation(n=1e7, rho=0.75, alpha=alpha, beta=beta, gamma=gamma, eps=eps)
   result = result %>% 
     bind_rows(., 
-              data.frame(AZY_ne_re = (res[6] - res[5]) - (res[9] - res[8]),
+              data.frame(value = gamma7, AZY_ne_re = (res[6] - res[5]) - (res[9] - res[8]),
                           AZMY_ne_re = (res[7] - res[6]) - (res[11] - res[10]))
               )
 }
@@ -77,13 +77,13 @@ result
 # 2. Changing rho
 
 rho = c(0, 0.3, 0.6, 0.75, 0.9) # only positive values
-result = data.frame(AZY_ne_re = c(), AZMY_ne_re = c())
+result = data.frame(value = c(), AZY_ne_re = c(), AZMY_ne_re = c())
 
 for(rho in rho){
   res = generation(n=1e7, rho=rho, alpha=alpha, beta=beta, gamma=gamma, eps=eps)
   result = result %>% 
     bind_rows(., 
-              data.frame(AZY_ne_re = (res[6] - res[5]) - (res[9] - res[8]),
+              data.frame(value = rho, AZY_ne_re = (res[6] - res[5]) - (res[9] - res[8]),
                           AZMY_ne_re = (res[7] - res[6]) - (res[11] - res[10]))
               )
 }
@@ -92,14 +92,14 @@ for(rho in rho){
 # 3. Changing beta[4]
 
 beta4 = c(-3, -1, 0, 5, 7)
-result = data.frame(AZY_ne_re = c(), AZMY_ne_re = c())
+result = data.frame(value = c(), AZY_ne_re = c(), AZMY_ne_re = c())
 
 for(beta4 in beta4){
   beta[4] = beta4
   res = generation(n=1e7, rho=rho, alpha=alpha, beta=beta, gamma=gamma, eps=eps)
   result = result %>% 
     bind_rows(., 
-              data.frame(AZY_ne_re = (res[6] - res[5]) - (res[9] - res[8]),
+              data.frame(value = beta4, AZY_ne_re = (res[6] - res[5]) - (res[9] - res[8]),
                           AZMY_ne_re = (res[7] - res[6]) - (res[11] - res[10]))
               )
 }
