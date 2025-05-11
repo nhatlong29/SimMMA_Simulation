@@ -9,7 +9,7 @@ generation = function(n, rho, alpha, beta, gamma, eps, mode.y) {
     
     id = seq(1:n)
     mu0 = expit(alpha[1])
-    mu1 = expit(alpha[1] + alpha[2])
+    mu1 = expit(alpha[1] + alpha[2]) 
     
     # Generate (Z0,Z1)
     Z0 = rbinom(n, 1, mu0)
