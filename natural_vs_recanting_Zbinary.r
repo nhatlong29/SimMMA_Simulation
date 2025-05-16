@@ -9,14 +9,11 @@
 library(dplyr)
 expit = function(x) {exp(x)/(1+exp(x))}
 
-generation = function(n, rho, alpha, beta, gamma, eps) {
+generation = function(n=1e7, rho, alpha, beta, gamma, eps) {
   
   #Z = expit(alpha[1] + alpha[2]*A)
   #M = beta[1] + beta[2]A + beta[3]*Z + beta[4]*A*Z + epsM
   #Y = gamma[1] + gamma[2]*A + gamma[3]*Z + gamma[4]*M + gamma[5]*A*Z + gamma[6]*A*M + gamma[7]*Z*M + gamma[8]*A*Z*M + epsY 
-
-  alpha = 1*c(0.5, -0.5)
-  n = 1e7
 
   mu0 = expit(alpha[1])
   mu1 = expit(alpha[1] + alpha[2]) # mu1 should be < mu0 to make sure p.z0.1 <1, equivalent to alpha[2] <0
@@ -50,76 +47,115 @@ generation = function(n, rho, alpha, beta, gamma, eps) {
   Ys2.dprime = gamma[1] + gamma[3]*T0 + gamma[4]*M1 + gamma[7]*T0*M1 + epsY
   Ys3.dprime = gamma[1] + gamma[3]*T0 + gamma[4]*M1Z0 + gamma[7]*T0*M1Z0 + epsY
 
-  return(colMeans(data.frame(Z0,Z1,M1,M0,Ys1,Ys2,Ys3,Ys1.prime,Ys2.prime,Ys2.dprime,Ys3.dprime)))
+  # ositive AZY; AZMY -> Pr(AZY>0)...
+  AZY_ne_pos = ifelse(Ys2 - Ys1 > 0, 1, 0)
+  AZY_re_pos = ifelse(Ys2.prime - Ys1.prime > 0, 1, 0)
+  AZMY_ne_pos = ifelse(Ys3 - Ys2 > 0, 1, 0)
+  AZMY_re_pos = ifelse(Ys3.dprime - Ys2.dprime > 0, 1, 0)
+
+  return(colMeans(data.frame(Z0,Z1,M1,M0,Ys1,Ys2,Ys3,Ys1.prime,Ys2.prime,Ys2.dprime,Ys3.dprime,AZY_ne_pos, AZY_re_pos, AZMY_ne_pos, AZMY_re_pos)))
   }
 
-# Example
-
-
-
-# 1. Changing gamma[7]
-
-gamma7 = c(-4, -3, -0.5, 1, 1.5)
-result = data.frame(value = c(), AZY_ne = c(), AZY_re = c(), AZY_ne_re = c(), 
-                                AZMY_ne = c(), AZMY_re = c(), AZMY_ne_re = c())
-set.seed(1234)
-for(gamma7 in gamma7){
-  gamma[7] = gamma7
-  res = generation(n=1e7, rho=0.75, alpha=alpha, beta=beta, gamma=gamma, eps=eps)
-  result = result %>% 
-    bind_rows(., 
-              data.frame(value = gamma7, AZY_ne = (res[6] - res[5]), AZY_re = (res[9] - res[8]), 
-                                        AZY_ne_re = (res[6] - res[5]) - (res[9] - res[8]),
-                                        AZMY_ne = c(), AZMY_re = c(),
-                                        AZMY_ne_re = (res[7] - res[6]) - (res[11] - res[10]))
-              )
-}
-
-result
-
-# 2. Changing rho
-
-alpha = 1*c(0.5, -0.5) # alpha[1] >= -alpha[2]/2 and alpha[2] <0
-beta = 1*c(0.5, 0.5, 1.5, 2)
-gamma = 1*c(1.5, 1.5, 1.5, 1.5, 1, 1, 0, 1)
-eps = list(c(NaN, NaN), c(0, 1), c(0, 1))
-rho = c(-0.6, 0, 0.3, 0.5, 0.75) # -sqrt((1-mu0)*(1-mu1)/(mu0*mu1)) = - 0.7788 < rho <= sqrt(mu1*(1-mu0)/(mu0*(1-mu1))) = 0.7788
-result = data.frame(value = c(), AZY_ne_re = c(), AZMY_ne_re = c())
-set.seed(1234)
-
-for(rho in rho){
-  res = generation(n=1e7, rho=rho, alpha=alpha, beta=beta, gamma=gamma, eps=eps)
-  result = result %>% 
-    bind_rows(., 
-              data.frame(value = gamma7, AZY_ne = (res[6] - res[5]), AZY_re = (res[9] - res[8]), 
-                                        AZY_ne_re = (res[6] - res[5]) - (res[9] - res[8]),
-                                        AZMY_ne = c(), AZMY_re = c(),
-                                        AZMY_ne_re = (res[7] - res[6]) - (res[11] - res[10]))
-              )
-}
-result
-
-# 3. Changing beta[4]
-
+# parameters original settings
 alpha = 1*c(0.5, 0.5)
 beta = 1*c(0.5, 0.5, 1.5, 2)
-gamma = 1*c(1.5, 1.5, 1.5, 1.5, 1, 1, 0, 1)
+gamma = 1*c(1.5, 1.5, 1.5, 1.5, 1, 1, 1, 1)
+rho = 0.75
 eps = list(c(NaN, NaN), c(0, 1), c(0, 1))
-beta4 = c(-3, -1, 0, 5, 7)
-result = data.frame(value = c(), AZY_ne_re = c(), AZMY_ne_re = c())
-set.seed(1234)
 
-for(beta4 in beta4){
-  beta[4] = beta4
-  res = generation(n=1e7, rho=0.75, alpha=alpha, beta=beta, gamma=gamma, eps=eps)
+result = data.frame(type =c(),
+                    value = c(),
+                    AZY_ne = c(), 
+                    AZY_re = c(), 
+                    AZY_ne_re = c(), 
+                    AZMY_ne = c(), 
+                    AZMY_re = c(),
+                    AZMY_ne_re = c(),
+                    AZY_ne_pos = c(),
+                    AZY_re_pos = c(),
+                    AZMY_ne_pos = c(),
+                    AZMY_re_pos = c())
+
+# 1. gamma[7] simulation
+gamma7.l = c(-1.5 ,-1, -0.5, 0, 0.5, 1, 1.5)
+gamma.sim = gamma
+for(gamma7.sim in gamma7.l){
+  set.seed(1234)
+  gamma.sim[7] = gamma7.sim
+  res = generation(n=1e7, rho=rho, alpha=alpha, beta=beta, gamma=gamma.sim, eps=eps)
   result = result %>% 
     bind_rows(., 
-              data.frame(value = gamma7, AZY_ne = (res[6] - res[5]), AZY_re = (res[9] - res[8]), 
-                                        AZY_ne_re = (res[6] - res[5]) - (res[9] - res[8]),
-                                        AZMY_ne = c(), AZMY_re = c(),
-                                        AZMY_ne_re = (res[7] - res[6]) - (res[11] - res[10]))
+              data.frame(type = 'gamma6',
+                        value = gamma7.sim,
+                        AZY_ne = (res[6] - res[5]), 
+                        AZY_re = (res[9] - res[8]), 
+                        AZY_ne_re = ((res[6] - res[5]) - (res[9] - res[8])),
+                        AZMY_ne = (res[7] - res[6]),
+                        AZMY_re = (res[11] - res[10]),
+                        AZMY_ne_re = ((res[7] - res[6]) - (res[11] - res[10])),
+                        AZY_ne_pos = res[12],
+                        AZY_re_pos = res[13],
+                        AZMY_ne_pos = res[14],
+                        AZMY_re_pos = res[15])
               )
 }
 
-result
+# 2. rho simulation
+rho.l = seq(-0.5, 0.75, 0.25)
+for(rho.sim in rho.l){
+  set.seed(1234)
+  res = generation(n=1e7, rho=rho.sim, alpha=alpha, beta=beta, gamma=gamma, eps=eps)
+  result = result %>% 
+    bind_rows(., 
+              data.frame(type = 'rho',
+                        value = rho.sim,
+                        AZY_ne = (res[6] - res[5]), 
+                        AZY_re = (res[9] - res[8]), 
+                        AZY_ne_re = ((res[6] - res[5]) - (res[9] - res[8])),
+                        AZMY_ne = (res[7] - res[6]),
+                        AZMY_re = (res[11] - res[10]),
+                        AZMY_ne_re = ((res[7] - res[6]) - (res[11] - res[10])),
+                        AZY_ne_pos = res[12],
+                        AZY_re_pos = res[13],
+                        AZMY_ne_pos = res[14],
+                        AZMY_re_pos = res[15])
+              )
+}
 
+# 3. beta[4] simulation
+beta4.l = c(-1, -0.5, 0, 0.5, 1)
+beta.sim = beta
+for(beta4.sim in beta4.l){
+  set.seed(1234)
+  beta.sim[4] = beta4.sim
+  res = generation(n=1e7, rho=rho, alpha=alpha, beta=beta.sim, gamma=gamma, eps=eps)
+  result = result %>% 
+    bind_rows(., 
+              data.frame(type = 'beta3',
+                        value = beta4.sim,
+                        AZY_ne = (res[6] - res[5]),
+                        AZY_re = (res[9] - res[8]), 
+                        AZY_ne_re = (res[6] - res[5]) - (res[9] - res[8]),
+                        AZMY_ne = (res[7] - res[6]), 
+                        AZMY_re = (res[11] - res[10]),
+                        AZMY_ne_re = (res[7] - res[6]) - (res[11] - res[10]),
+                        AZY_ne_pos = res[12],
+                        AZY_re_pos = res[13],
+                        AZMY_ne_pos = res[14],
+                        AZMY_re_pos = res[15])
+              )
+}
+
+
+# hard write
+sink("SimMMA_Simulation/res_Zbinary.txt")
+print("Simulation results for Z binary")
+print("Original settings")
+print(paste("alpha = ", paste(alpha, collapse = ",")))
+print(paste("beta = ", paste(beta, collapse = ",")))
+print(paste("gamma = ", paste(gamma, collapse = ",")))
+print(paste("rho = ", rho))
+print(paste("eps = ", paste(eps, collapse = ",")))
+print("Simulation results")
+print(result)
+sink()
