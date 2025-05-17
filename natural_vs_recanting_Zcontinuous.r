@@ -9,12 +9,13 @@
 library(MASS)
 library(dplyr)
 
-generation = function(n, muZ, rhoZ, beta, gamma, eps) {
+generation = function(n, rhoZ, alpha, beta, gamma, eps) {
   
   # M = beta[1] + beta[2]A + beta[3]*Z + beta[4]*A*Z + epsM
   # Y = gamma[1] + gamma[2]*A + gamma[3]*Z + gamma[4]*M + gamma[5]*A*Z + gamma[6]*A*M + gamma[7]*Z*M + gamma[8]*A*Z*M + epsY
   
   # Generate (Z0,Z1)
+  muZ = c(alpha[1],alpha[1]+alpha[2])
   covZ = matrix(c(eps[[2]][2], rhoZ, rhoZ, eps[[2]][2]), nrow=2)
   matZ = mvrnorm(n=n, mu=muZ, Sigma=covZ)
   Z0 = matZ[,1]
@@ -52,7 +53,7 @@ generation = function(n, muZ, rhoZ, beta, gamma, eps) {
 }
 
 # parameters original settings
-muZ = c(1,1)
+alpha = 1*c(0.5,0.5)
 rhoZ = 0.75
 beta = 1*c(0.5, 0.5, 1.5, 2)
 gamma = 1*c(1.5, 1.5, 1.5, 1.5, 1, 1, 1, 1)
@@ -77,7 +78,7 @@ gamma.sim = gamma
 for(gamma7.sim in gamma7.l){
   set.seed(1234)
   gamma.sim[7] = gamma7.sim
-  res = generation(n=1e7, muZ=muZ, rhoZ=rhoZ, beta=beta, gamma=gamma.sim, eps=eps)
+  res = generation(n=1e7, alpha=alpha, rhoZ=rhoZ, beta=beta, gamma=gamma.sim, eps=eps)
   result = result %>% 
     bind_rows(., 
               data.frame(type = 'gamma6',
@@ -99,7 +100,7 @@ for(gamma7.sim in gamma7.l){
 rho.l = seq(-0.5, 0.75, 0.25)
 for(rho.sim in rho.l){
   set.seed(1234)
-  res = generation(n=1e7, muZ=muZ, rhoZ=rho.sim, beta=beta, gamma=gamma, eps=eps)
+  res = generation(n=1e7, alpha=alpha, rhoZ=rho.sim, beta=beta, gamma=gamma, eps=eps)
   result = result %>% 
     bind_rows(., 
               data.frame(type = 'rho',
@@ -123,7 +124,7 @@ beta.sim = beta
 for(beta4.sim in beta4.l){
   set.seed(1234)
   beta.sim[4] = beta4.sim
-  res = generation(n=1e7, muZ=muZ, rhoZ=rho, beta=beta.sim, gamma=gamma, eps=eps)
+  res = generation(n=1e7, alpha=alpha, rhoZ=rhoZ, beta=beta.sim, gamma=gamma, eps=eps)
   result = result %>% 
     bind_rows(., 
               data.frame(type = 'beta3',
@@ -142,10 +143,10 @@ for(beta4.sim in beta4.l){
 }
 
 # Hard write
-sink("SimMMA_Simulation/res_Zcontinuous.txt")
+sink("res_Zcontinuous.txt")
 print("Simulation results for Z continuous")
 print("Original settings")
-print(paste("muZ = ", paste(muZ, collapse = ",")))
+print(paste("alpha = ", paste(alpha, collapse = ",")))
 print(paste("beta = ", paste(beta, collapse = ",")))
 print(paste("gamma = ", paste(gamma, collapse = ",")))
 print(paste("rho = ", rhoZ))
