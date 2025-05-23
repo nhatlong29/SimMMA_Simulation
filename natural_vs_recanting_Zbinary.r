@@ -9,6 +9,7 @@
 library(dplyr, warn.conflicts = F)
 library(kableExtra, warn.conflicts = F)
 library(ggplot2)
+library(tidyr)
 
 expit = function(x) {exp(x)/(1+exp(x))}
 
@@ -122,23 +123,34 @@ for(alpha2.sim in alpha2.1){
 result %>% kable()
 
 result %>%
-  
+  pivot_longer(., cols = c("AZY_ne", "AZY_re", "AZMY_ne", "AZMY_re", "AY", "AMY"),
+              names_to = "path",
+              values_to = "path_value") %>%
+  ggplot(data = ., aes(x = alpha1, y = path_value, colour = path)) +
+    geom_point(stat = "identity") +
+    geom_line() +
+    labs(y = "Value of specific path", x = expression(alpha[1])) +
+    theme_minimal() +
+    theme(axis.line = element_line(colour = "black"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+
 
 # After choosing
 
 
 # 1. Changing gamma[7]
 
-gamma7.1 = c(-1.5 ,-1, -0.5, 0.5, 1)
+gamma7.1 = c(-1, -0.5, 0.5, 1)
 gamma.sim = gamma
 result = data.frame(type =c(),
                     value = c(),
                     AZY_ne = c(), 
                     AZY_re = c(), 
-                    AZY_ne_re = c(), 
                     AZMY_ne = c(), 
                     AZMY_re = c(),
-                    AZMY_ne_re = c())
+                    AY = c(),
+                    AMY = c())
 set.seed(1234)
 
 for(gamma7.sim in gamma7.1){
@@ -150,72 +162,122 @@ for(gamma7.sim in gamma7.1){
               data.frame(type = 'gamma6',
                         value = gamma7.sim,
                         AZY_ne = res["Ys2"] - res["Ys1"], 
-                        AZY_re = res["Ys2.prime"] - res["Ys1.prime"], 
-                        AZY_ne_re = (res["Ys2"] - res["Ys1"]) - (res["Ys2.prime"] - res["Ys1.prime"]),
+                        AZY_re = res["Ys2.prime"] - res["Ys1.prime"],
                         AZMY_ne = res["Ys3"] - res["Ys2"],
                         AZMY_re = res["Ys3.dprime"] - res["Ys2.dprime"],
-                        AZMY_ne_re = (res["Ys3"] - res["Ys2"]) - (res["Ys3.dprime"] - res["Ys2.dprime"]))
+                        AY = res["Ys1"] - res["Ys0"],
+                        AMY = res["Ys4"] - res["Ys3"])
               )
 }
 
 result %>% kable(digits = 3)
 result %>% kable(format = "latex", digits = 3)
 
+result %>%
+  pivot_longer(., cols = c("AZY_ne", "AZY_re", "AZMY_ne", "AZMY_re", "AY", "AMY"),
+              names_to = "path",
+              values_to = "path_value") %>%
+  ggplot(data = ., aes(x = value, y = path_value, colour = path)) +
+    geom_point(stat = "identity") +
+    geom_line() +
+    labs(y = "Value of specific path", x = expression(gamma[6])) +
+    theme_minimal() +
+    theme(axis.line = element_line(colour = "black"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+
 
 # 2. Changing rho
 
-alpha = 1*c(0.5, -0.5) # alpha[1] >= -alpha[2]/2 and alpha[2] <0
-beta = 1*c(0.5, 0.5, 1.5, 2)
-gamma = 1*c(1.5, 1.5, 1.5, 1.5, 1, 1, 0, 1)
-eps = list(c(NaN, NaN), c(0, 1), c(0, 1))
-rho = c(-0.6, 0, 0.3, 0.5, 0.75) # -sqrt((1-mu0)*(1-mu1)/(mu0*mu1)) = - 0.7788 < rho <= sqrt(mu1*(1-mu0)/(mu0*(1-mu1))) = 0.7788
-result = data.frame(value = c(), AZY_ne = c(), AZY_re = c(), AZY_ne_re = c(), 
-                                AZMY_ne = c(), AZMY_re = c(), AZMY_ne_re = c())
+rho.sim = c(-0.6, 0.3, 0.5, 0.75) # -sqrt((1-mu0)*(1-mu1)/(mu0*mu1)) = - 0.7788 < rho <= sqrt(mu1*(1-mu0)/(mu0*(1-mu1))) = 0.7788
+
+result = data.frame(type = c(),
+                    value = c(), 
+                    AZY_ne = c(),
+                    AZY_re = c(), 
+                    AZMY_ne = c(), 
+                    AZMY_re = c(),
+                    AY = c(),
+                    AMY = c())
 set.seed(1234)
 
-for(rho in rho){
+for(rho in rho.sim){
   res = generation(n=1e7, rho=rho, alpha=alpha, beta=beta, gamma=gamma, eps=eps)
   result = result %>% 
     bind_rows(., 
               data.frame(type = "rho",
                         value = rho, 
                         AZY_ne = res["Ys2"] - res["Ys1"], 
-                        AZY_re = res["Ys2.prime"] - res["Ys1.prime"], 
-                        AZY_ne_re = (res["Ys2"] - res["Ys1"]) - (res["Ys2.prime"] - res["Ys1.prime"]),
+                        AZY_re = res["Ys2.prime"] - res["Ys1.prime"],
                         AZMY_ne = res["Ys3"] - res["Ys2"],
                         AZMY_re = res["Ys3.dprime"] - res["Ys2.dprime"],
-                        AZMY_ne_re = (res["Ys3"] - res["Ys2"]) - (res["Ys3.dprime"] - res["Ys2.dprime"]))
+                        AY = res["Ys1"] - res["Ys0"],
+                        AMY = res["Ys4"] - res["Ys3"])
               )
 }
 
+result %>%
+  pivot_longer(., cols = c("AZY_ne", "AZY_re", "AZMY_ne", "AZMY_re", "AY", "AMY"),
+              names_to = "path",
+              values_to = "path_value") %>%
+  ggplot(data = ., aes(x = value, y = path_value, colour = path)) +
+    geom_point(stat = "identity") +
+    geom_line() +
+    labs(y = "Value of specific path", x = expression(rho)) +
+    theme_minimal() +
+    theme(axis.line = element_line(colour = "black"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+
+result %>% kable()
 result %>% kableExtra::kable(format = "latex", digits = 3)
 
 # 3. Changing beta[3]
 
-alpha = 1*c(0.5, -0.5)
-beta = 1*c(0.5, 0.5, 1.5, 2)
-beta3 = c(-3, -1, 0, 5, 7)
-gamma = 1*c(1.5, 1.5, 1.5, 1.5, 1, 1, 0, 1)
-eps = list(c(NaN, NaN), c(0, 1), c(0, 1))
-result = data.frame(value = c(), AZY_ne = c(), AZY_re = c(), AZY_ne_re = c(), 
-                                AZMY_ne = c(), AZMY_re = c(), AZMY_ne_re = c())
+
+beta3.1 = c(-1.5, -1, 0, 1, 2)
+beta.sim = c(0.5, 0.5, 1.5, 2)
+
+result = data.frame(type = c(),
+                    value = c(), 
+                    AZY_ne = c(), 
+                    AZY_re = c(), 
+                    AZMY_ne = c(), 
+                    AZMY_re = c(),
+                    AY = c(),
+                    AMY = c()
+                    )
 set.seed(1234)
 
-for(beta3 in beta3){
-  beta[3] = beta3
-  res = generation(n=1e7, rho=0.75, alpha=alpha, beta=beta, gamma=gamma, eps=eps)
+for(beta3 in beta3.1){
+  beta.sim[3] = beta3
+  res = generation(n=1e7, rho=0.75, alpha=alpha, beta=beta.sim, gamma=gamma, eps=eps)
   result = result %>% 
     bind_rows(., 
               data.frame(type = "beta2",
                         value = beta3, 
                         AZY_ne = res["Ys2"] - res["Ys1"], 
-                        AZY_re = res["Ys2.prime"] - res["Ys1.prime"], 
-                        AZY_ne_re = (res["Ys2"] - res["Ys1"]) - (res["Ys2.prime"] - res["Ys1.prime"]),
+                        AZY_re = res["Ys2.prime"] - res["Ys1.prime"],
                         AZMY_ne = res["Ys3"] - res["Ys2"],
                         AZMY_re = res["Ys3.dprime"] - res["Ys2.dprime"],
-                        AZMY_ne_re = (res["Ys3"] - res["Ys2"]) - (res["Ys3.dprime"] - res["Ys2.dprime"]))
+                        AY = res["Ys1"] - res["Ys0"],
+                        AMY = res["Ys4"] - res["Ys3"])
               )
 }
+
+result %>%
+  pivot_longer(., cols = c("AZY_ne", "AZY_re", "AZMY_ne", "AZMY_re", "AY", "AMY"),
+              names_to = "path",
+              values_to = "path_value") %>%
+  ggplot(data = ., aes(x = value, y = path_value, colour = path)) +
+    geom_point(stat = "identity") +
+    geom_line() +
+    labs(y = "Value of specific path", x = expression(beta[2])) +
+    theme_minimal() +
+    theme(axis.line = element_line(colour = "black"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+
 
 
 result %>% kableExtra::kable()
