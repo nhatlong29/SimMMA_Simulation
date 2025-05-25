@@ -1,0 +1,398 @@
+---
+title: "Sim_Visualize"
+author: "Nhat Long Ngo"
+date: "2025-05-24"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(dplyr, warn.conflicts = F)
+library(kableExtra, warn.conflicts = F)
+library(ggplot2)
+library(tidyr)
+library(plotly)
+
+```
+
+# Writing function
+```{r}
+
+# Calculate the specific paths
+
+expit = function(x) {exp(x)/(1+exp(x))}
+
+generation = function(n, rho, alpha, beta, gamma, eps) {
+  
+  #Z = expit(alpha[1] + alpha[2]*A)
+  #M = beta[1] + beta[2]A + beta[3]*Z + beta[4]*A*Z + epsM
+  #Y = gamma[1] + gamma[2]*A + gamma[3]*Z + gamma[4]*M + gamma[5]*A*Z + gamma[6]*A*M + gamma[7]*Z*M + gamma[8]*A*Z*M + epsY 
+
+  mu0 = expit(alpha[1])
+  mu1 = expit(alpha[1] + alpha[2])
+
+  # Generate (Z0,Z1)
+  Z0 = rbinom(n, 1, mu0)
+  p.z0.1 = mu1 + rho*sqrt((1-mu0)*mu1*(1-mu1)/mu0) # -sqrt((mu0*mu1)/((1-mu0)*(1-mu1))) < rho < sqrt(mu0*(1-mu1)/(mu1*(1-mu0)))
+  p.z0.0 = mu1 - rho*sqrt(mu0*mu1*(1-mu1)/(1-mu0)) # -sqrt((1-mu0)*(1-mu1)/(mu0*mu1)) < rho < sqrt(mu1*(1-mu0)/(mu0*(1-mu1)))
+  Z1 = rbinom(n,1,Z0*p.z0.1 + (1-Z0)*p.z0.0) # Z0*P[Z(1) =1|Z(0)=1] + (1-Z0)*P[Z(1) =1|Z(0)=0]
+
+  # Generate (T0,T1)
+  T0 = rbinom(n, 1, mu0)
+  T1 = rbinom(n, 1, mu1)
+
+  # Generate M(1), M(0), M(1,Z(0)), M(1,Z(1)), M(1,T(1))
+  epsM = rnorm(n=n, mean=eps[[2]][1], sd=eps[[2]][2])
+  M1 = beta[1] + beta[2] + beta[3]*Z1 + beta[4]*Z1 + epsM
+  M0 = beta[1] + beta[3]*Z0 + epsM
+  M1Z0 = beta[1] + beta[2] + beta[3]*Z0 + beta[4]*Z0 + epsM
+  M1T1 = beta[1] + beta[2] + beta[3]*T1 + beta[4]*T1 + epsM
+  
+  # Generate Ys1, Ys2, Ys3
+  epsY = rnorm(n=n, mean=eps[[3]][1], sd=eps[[3]][2])
+  Ys0 = gamma[1] + gamma[2] + gamma[3]*Z1 + gamma[4]*M1 + gamma[5]*Z1 +
+        gamma[6]*M1 + gamma[7]*Z1*M1 + gamma[8]*1*Z1*M1 + epsY
+  Ys1 = gamma[1] + gamma[3]*Z1 + gamma[4]*M1 + gamma[7]*Z1*M1 + epsY
+  Ys2 = gamma[1] + gamma[3]*Z0 + gamma[4]*M1 + gamma[7]*Z0*M1 + epsY
+  Ys3 = gamma[1] + gamma[3]*Z0 + gamma[4]*M1Z0 + gamma[7]*Z0*M1Z0 + epsY
+  Ys4 = gamma[1] + gamma[3]*Z0 + gamma[4]*M0 + gamma[7]*Z0*M0 + epsY
+  
+  # Generate Ys1'; Ys2'; Ys2"; Ys3"
+  Ys1.prime = gamma[1] + gamma[3]*Z1 + gamma[4]*M1T1 + gamma[7]*Z1*M1T1 + epsY
+  Ys2.prime = gamma[1] + gamma[3]*Z0 + gamma[4]*M1T1 + gamma[7]*Z0*M1T1 + epsY
+  Ys2.dprime = gamma[1] + gamma[3]*T0 + gamma[4]*M1 + gamma[7]*T0*M1 + epsY
+  Ys3.dprime = gamma[1] + gamma[3]*T0 + gamma[4]*M1Z0 + gamma[7]*T0*M1Z0 + epsY
+
+  # Calculate natural and recanting-twin effects
+  # AZY_ne = Ys2 - Ys1 = gamma[3]*(Z0-Z1) + gamma[7]*M1*(Z0-Z1)
+  # AZY_re = Ys2.prime - Ys1.prime = gamma[3]*(Z0-Z1) + gamma[7]*M1T1*(Z0-Z1)
+  # AZMY_ne = Ys3 - Ys2 = gamma[4]*(M1Z0-M1) + gamma[7]*Z0*(M1Z0-M1)
+  # AZMY_re = Ys3.dprime - Ys2.dprime = gamma[4]*(M1Z0-M1) + gamma[7]*T0*(M1Z0-M1)
+  # AMY = Ys4 - Ys3 = gamma[4]*(M0-M1Z0) + gamma[7]*Z0*(M0-M1Z0)
+  # AY = Ys1 - Ys0 = - gamma[2] - gamma[5]*Z1 - gamma[6]*M1 - gamma[8]*1*Z1*M1
+
+  # Positive AZY; AZMY -> Pr(AZY>0)...
+  AZY_ne_pos = ifelse(Ys2 - Ys1 > 0, 1, 0)
+  AZY_re_pos = ifelse(Ys2.prime - Ys1.prime > 0, 1, 0)
+  AZMY_ne_pos = ifelse(Ys3 - Ys2 > 0, 1, 0)
+  AZMY_re_pos = ifelse(Ys3.dprime - Ys2.dprime > 0, 1, 0)
+
+
+  res = colMeans(data.frame(Ys0,Ys1,Ys2,Ys3,Ys4,Ys1.prime,Ys2.prime,Ys2.dprime,Ys3.dprime))
+  return(res)
+  }
+
+
+# Calculate specific paths at random values of rho, alpha, beta, gamma
+
+pathValue = function(rho, alpha2, beta3, gamma7){
+  rho = rho
+  alpha[2] = alpha2
+  beta[3] = beta3
+  gamma[7] = gamma7
+  
+  set.seed(1234)
+  res = generation(n=1e7, rho=rho, alpha=alpha, beta=beta, gamma=gamma, eps=eps)
+
+  AZY_ne = res["Ys2"] - res["Ys1"]
+  AZY_re = res["Ys2.prime"] - res["Ys1.prime"]
+  AZMY_ne = res["Ys3"] - res["Ys2"]
+  AZMY_re = res["Ys3.dprime"] - res["Ys2.dprime"]
+  AY = res["Ys1"] - res["Ys0"]
+  AMY = res["Ys4"] - res["Ys3"]
+  
+  pathvalue = c(AZY_ne, AZY_re, AZMY_ne, AZMY_re, AY, AMY)
+  names(pathvalue) = c("AZY_ne", "AZY_re", "AZMY_ne", "AZMY_re", "AY", "AMY")
+  return(pathvalue)
+  
+}
+
+
+# Calculate the number of differences in ranking position
+countNoDiff = function(a, b){
+  
+  getOrder = function(x){
+    rank_order = order(x, decreasing = TRUE)
+    rank_position = match(1:length(x), rank_order)
+    return(rank_position)
+  }
+  
+  rank_a = getOrder(a)
+  rank_b = getOrder(b)
+  sum(rank_a - rank_b != 0)
+}
+
+```
+
+
+# Create data
+```{r}
+
+alpha2.1 = c(-1.5, -0.5, 0.5, 1)
+rho1 = c(-0.75, -0.25, 0.25, 0.75)
+beta3.1 = c(-1.5, -1, 0, 1, 2)
+gamma7.1 = c(-1, -0.5, 0.5, 1)
+
+
+df_3D = expand.grid(rho1 = c(-0.75, -0.25, 0.25, 0.75),
+                    alpha2.1 = c(-1.5, -0.5, 0.5, 1),
+                    beta3.1 = c(-1.5, -1, 1, 2),
+                    gamma7.1 = c(-1, -0.5, 0.5, 1))
+
+```
+
+```{r}
+
+# parameters original settings
+alpha = 1*c(0.5, -0.5)
+beta = 1*c(0.5, 0.5, 1.5, 2)
+gamma = 1*c(1.5, 1.5, 1.5, 1.5, 1, 1, 1, 1)
+rho = 0.75
+eps = list(c(NaN, NaN), c(0, 1), c(0, 1))
+
+# Calculate specific paths for each combination of rho, alpha, beta, gamma
+AZY_ne = c()
+AZY_re = c()
+AZMY_ne = c()
+AZMY_re = c()
+AY = c()
+AMY = c()
+for (i in 1:nrow(df_3D)) {
+  x = df_3D[i,] %>% as.numeric()
+  res = pathValue(x[1], x[2], x[3], x[4])
+  AZY_ne[i] = res["AZY_ne"]
+  AZY_re[i] = res["AZY_re"]
+  AZMY_ne[i] = res["AZMY_ne"]
+  AZMY_re[i] = res["AZMY_re"]
+  AY[i] = res["AY"]
+  AMY[i] = res["AMY"]
+}
+
+# Prepare data for visualization
+df_viz = df_3D %>% 
+  drop_na() %>%
+  mutate(AZY_sign = if_else(AZY_ne*AZY_re >0, "same", "different"),
+         AZMY_sign = if_else(AZMY_ne*AZMY_re >0, "same", "different")) %>%
+  rowwise() %>%
+  mutate(no_of_diff = countNoDiff(a = c(AY, AMY, AZY_ne, AZMY_ne),
+                                  b = c(AY, AMY, AZY_re, AZMY_re))
+         )
+
+```
+
+# Visualization
+
+## AZY sign
+```{r}
+
+rho1 = c(-0.6, 0.3, 0.5, 0.75)
+
+p_collect = list()
+for (rho in rho1) {
+  df_rho = df_viz %>% filter(rho1 == rho)
+  
+  sign_count = df_rho %>% group_by(AZY_sign) %>% summarise(n = n())
+  blue_n = sign_count %>% filter(AZY_sign == "same") %>% pull(n)
+  red_n = sign_count %>% filter(AZY_sign == "different") %>% pull(n)
+  
+  p =  plot_ly(df_rho, type = "scatter3d", 
+               x = ~beta3.1, y = ~alpha2.1, z = ~gamma7.1, 
+               color = ~AZY_sign, colors = c("same" = "blue", "different" = "red"),
+               mode = "markers", marker = list(size = 4),
+               showlegend = TRUE) %>%
+    layout(title = list(text = paste("Sign of Natural vs. Recanting-twin AZY, rho =", rho),
+                        font = list(size = 12)),
+           scene = list(xaxis = list(title = "beta2"),
+                        yaxis = list(title = "alpha1"),
+                        zaxis = list(title = "gamma6")),
+           annotations = list(
+             list(text = paste("Same sign:", blue_n, " | Different sign:", red_n),
+                  xref = "paper", yref = "paper",
+                  x = 0, y = 1,   # Below the plot (adjust y to move up/down)
+                  showarrow = FALSE,
+                  font = list(size = 10)
+                  )
+             ),
+           margin = list(l = -30, r = 80, b = 0, t = 20)
+           )
+  
+  
+  unique_y = sort(unique(df_rho$alpha2.1))
+  for (yval in unique_y) {
+    # Define the vertical rectangle at x = xval
+    xlim <- range(df_rho$beta3.1)
+    zlim <- range(df_rho$gamma7.1)
+    
+    # Rectangle corners in (y, z), fixed x
+    y_plane <- rep(yval, 4)
+    x_plane <- c(xlim[1], xlim[2], xlim[2], xlim[1])
+    z_plane <- c(zlim[1], zlim[1], zlim[2], zlim[2])
+    
+    # Add as mesh3d (two triangles make a plane)
+    p = add_trace(p,
+                   x = x_plane,
+                   y = y_plane,
+                   z = z_plane,
+                   i = c(0, 0),
+                   j = c(1, 2),
+                   k = c(2, 3),
+                   type = "mesh3d",
+                   opacity = 0.2,
+                   color = I("gray"),
+                   showscale = FALSE,
+                   showlegend = FALSE)
+  }
+  
+  i = match(rho, rho1)
+  p_collect[[i]] = p
+}
+
+
+# orca(p_collect[[1]], "plot.png")
+# Note: orca() is used for exporting htmlwidget to png/jpeg/.... It requires some installation on your PC.
+
+
+```
+
+## AZMY sign
+```{r}
+rho1 = c(-0.6, 0.3, 0.5, 0.75)
+
+p_collect = list()
+for (rho in rho1) {
+  df_rho = df_viz %>% filter(rho1 == rho)
+  
+  sign_count = df_rho %>% group_by(AZMY_sign) %>% summarise(n = n())
+  blue_n = sign_count %>% filter(AZMY_sign == "same") %>% pull(n)
+  red_n = sign_count %>% filter(AZMY_sign == "different") %>% pull(n)
+  
+  p =  plot_ly(df_rho, type = "scatter3d", 
+               x = ~beta3.1, y = ~alpha2.1, z = ~gamma7.1, 
+               color = ~as.factor(AZMY_sign), colors = c("same" = "blue", "different" = "red"),
+               mode = "markers", marker = list(size = 4),
+               showlegend = TRUE) %>%
+    layout(title = paste("Sign of Natural vs Recanting-twin AZMY, rho =", rho),
+           scene = list(xaxis = list(title = "beta2"),
+                        yaxis = list(title = "alpha1"),
+                        zaxis = list(title = "gamma6")),
+           annotations = list(
+             list(text = paste("Same sign:", blue_n, " | Different sign:", red_n),
+                  xref = "paper", yref = "paper",
+                  x = 0, y = 1,   # Below the plot (adjust y to move up/down)
+                  showarrow = FALSE,
+                  font = list(size = 14)
+                  )
+             )
+           )
+  
+  
+  unique_y <- sort(unique(df_rho$alpha2.1))
+  for (yval in unique_y) {
+    # Define the vertical rectangle at x = xval
+    xlim <- range(df_rho$beta3.1)
+    zlim <- range(df_rho$gamma7.1)
+    
+    # Rectangle corners in (y, z), fixed x
+    y_plane <- rep(yval, 4)
+    x_plane <- c(xlim[1], xlim[2], xlim[2], xlim[1])
+    z_plane <- c(zlim[1], zlim[1], zlim[2], zlim[2])
+    
+    # Add as mesh3d (two triangles make a plane)
+    p <- add_trace(p,
+                   x = x_plane,
+                   y = y_plane,
+                   z = z_plane,
+                   i = c(0, 0),
+                   j = c(1, 2),
+                   k = c(2, 3),
+                   type = "mesh3d",
+                   opacity = 0.2,
+                   color = I("gray"),
+                   showscale = FALSE,
+                   showlegend = FALSE)
+  }
+  
+  i = match(rho, rho1)
+  p_collect[[i]] = p
+}
+
+
+```
+
+
+# No. of difference in orders
+```{r}
+rho1 = c(-0.6, 0.3, 0.5, 0.75)
+
+p_collect = list()
+for (rho in rho1) {
+  df_rho = df_viz %>% filter(rho1 == rho)
+  
+  diff_count = df_rho %>% group_by(no_of_diff) %>% summarise(n = n())
+  blue_n = diff_count %>% filter(no_of_diff == "4") %>% pull(n)
+  red_n = diff_count %>% filter(no_of_diff == "3") %>% pull(n)
+  green_n = diff_count %>% filter(no_of_diff == "2") %>% pull(n)
+  pink_n = diff_count %>% filter(no_of_diff == "1") %>% pull(n)
+  black_n = diff_count %>% filter(no_of_diff == "0") %>% pull(n)
+  
+  p =  plot_ly(df_rho, type = "scatter3d", 
+               x = ~beta3.1, y = ~alpha2.1, z = ~gamma7.1, 
+               color = ~as.factor(no_of_diff), colors = c("4" = "blue", "3" = "red", "2" = "green", "1" = "pink", "0" = "black"),
+               mode = "markers", marker = list(size = 4),
+               showlegend = TRUE) %>%
+    layout(title = paste("No. of difference in orders of Natural vs Recanting-twin effects, rho =", rho),
+           scene = list(xaxis = list(title = "beta2"),
+                        yaxis = list(title = "alpha1"),
+                        zaxis = list(title = "gamma6")),           
+           annotations = list(
+             list(text = paste("4 differences:", blue_n, 
+                               " | 3 differences:", red_n, 
+                               " | 2 differences:", green_n,
+                               " | 1 difference:", pink_n,
+                               " | The same:", black_n),
+                  xref = "paper", yref = "paper",
+                  x = 0, y = 1,   # Below the plot (adjust y to move up/down)
+                  showarrow = FALSE,
+                  font = list(size = 14)
+                  )
+             )
+           )
+  
+  
+  unique_y <- sort(unique(df_rho$alpha2.1))
+  for (yval in unique_y) {
+    # Define the vertical rectangle at x = xval
+    xlim <- range(df_rho$beta3.1)
+    zlim <- range(df_rho$gamma7.1)
+    
+    # Rectangle corners in (y, z), fixed x
+    y_plane <- rep(yval, 4)
+    x_plane <- c(xlim[1], xlim[2], xlim[2], xlim[1])
+    z_plane <- c(zlim[1], zlim[1], zlim[2], zlim[2])
+    
+    # Add as mesh3d (two triangles make a plane)
+    p <- add_trace(p,
+                   x = x_plane,
+                   y = y_plane,
+                   z = z_plane,
+                   i = c(0, 0),
+                   j = c(1, 2),
+                   k = c(2, 3),
+                   type = "mesh3d",
+                   opacity = 0.2,
+                   color = I("gray"),
+                   showscale = FALSE,
+                   showlegend = FALSE)
+  }
+  
+  i = match(rho, rho1)
+  p_collect[[i]] = p
+}
+
+```
