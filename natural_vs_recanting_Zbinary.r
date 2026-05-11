@@ -6,7 +6,11 @@
 
 # First setting: A&Z binary; M&Y continuous
 
-library(dplyr)
+library(dplyr, warn.conflicts = F)
+library(kableExtra, warn.conflicts = F)
+library(ggplot2)
+library(tidyr)
+
 expit = function(x) {exp(x)/(1+exp(x))}
 
 generation = function(n=1e7, rho, alpha, beta, gamma, eps, mode.y, mode.m) {
@@ -16,12 +20,12 @@ generation = function(n=1e7, rho, alpha, beta, gamma, eps, mode.y, mode.m) {
   #Y = gamma[1] + gamma[2]*A + gamma[3]*Z + gamma[4]*M + gamma[5]*A*Z + gamma[6]*A*M + gamma[7]*Z*M + gamma[8]*A*Z*M + epsY 
 
   mu0 = expit(alpha[1])
-  mu1 = expit(alpha[1] + alpha[2]) # mu1 should be < mu0 to make sure p.z0.1 <1, equivalent to alpha[2] <0
-  
+  mu1 = expit(alpha[1] + alpha[2])
+
   # Generate (Z0,Z1)
   Z0 = rbinom(n, 1, mu0)
-  p.z0.1 = mu1 + rho*sqrt((1-mu0)*mu1*(1-mu1)/mu0) # 0<= p.z0.1 <1, equivalent to alpha[1] >= -alpha[2]/2 and alpha[2] <0
-  p.z0.0 = mu1 - rho*sqrt(mu0*mu1*(1-mu1)/(1-mu0)) # -sqrt((1-mu0)*(1-mu1)/(mu0*mu1)) < rho <= sqrt(mu1*(1-mu0)/(mu0*(1-mu1)))
+  p.z0.1 = mu1 + rho*sqrt((1-mu0)*mu1*(1-mu1)/mu0) # -sqrt((mu0*mu1)/((1-mu0)*(1-mu1))) < rho < sqrt(mu0*(1-mu1)/(mu1*(1-mu0)))
+  p.z0.0 = mu1 - rho*sqrt(mu0*mu1*(1-mu1)/(1-mu0)) # -sqrt((1-mu0)*(1-mu1)/(mu0*mu1)) < rho < sqrt(mu1*(1-mu0)/(mu0*(1-mu1)))
   Z1 = rbinom(n,1,Z0*p.z0.1 + (1-Z0)*p.z0.0) # Z0*P[Z(1) =1|Z(0)=1] + (1-Z0)*P[Z(1) =1|Z(0)=0]
 
   # Generate (T0,T1)
