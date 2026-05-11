@@ -8,7 +8,7 @@ generation = function(n, rho, alpha, beta, gamma, eps, mode.z, mode.y, mode.m) {
   if (mode.z == 'con') {
     # Generate (Z0,Z1)
     muZ = c(alpha[1],alpha[1]+alpha[2])
-    covZ = matrix(c(eps[[2]][2], rho, rho, eps[[2]][2]), nrow=2)
+    covZ = matrix(c(eps[[1]][2], rho, rho, eps[[1]][2]), nrow=2)
     matZ = mvrnorm(n=n, mu=muZ, Sigma=covZ)
     Z0 = matZ[,1]
     Z1 = matZ[,2]
@@ -101,16 +101,8 @@ generation = function(n, rho, alpha, beta, gamma, eps, mode.z, mode.y, mode.m) {
                             Ys0.prime, Ys1.prime, Ys2.prime, Ys2.dprime, Ys3.dprime, Ys4.dprime,
                             Ys0.star, Ys1.star, Ys2.star, Ys3.star, Ys4.star)))
 }
-
-alpha2 = c(-1.5, -0.5, 0.5, 1.5)
-gamma7 = c(-1.5, -1, 0, 1, 1.5)
-rho = c(-0.75, -0.2, 0.2, 0.75)
-beta3 = c(-1.5, -1, 1, 1.5)
-mode.z = 'bi'
-mode.y = 'bi'
-mode.m = 'bi'
-
-result = data.frame(a1 = c(),
+sim = function(mode.z, mode.m, mode.y, alpha2, gamma7, beta3, rho) {
+    result = data.frame(a1 = c(),
                     g6 = c(),
                     r = c(),
                     beta2 = c(),
@@ -133,51 +125,54 @@ result = data.frame(a1 = c(),
                     P3_3.0 = c(),
                     P4_3.0 = c(),
                     Ze_3.0 = c())
-
-for (a2 in alpha2) {
-  for (g7 in gamma7) {
-    for (r in rho) {
-      for (b3 in beta3) {
-        set.seed(1234)
-        res = generation(n = 1e7, 
-                        rho = r, 
-                        alpha = c(0.5, a2), 
-                        beta = c(0.5, 0.5, b3, 2), 
-                        gamma = c(1.5, 1.5, 1.5, 1.5, 1, 1, g7, 1), 
-                        eps = list(c(NaN, NaN), c(0, 1), c(0, 1)),
-                        mode.z = mode.z,
-                        mode.y = mode.y,
-                        mode.m = mode.m)
-        result = result %>%
-                bind_rows(.,
-              data.frame(a1 = a2,
-                        g6 = g7,
-                        rho = r,
-                        beta2 = b3,
-                        P1 = res[5] - res[6],
-                        P2 = res[6] - res[7],
-                        P3 = res[7] - res[8],
-                        P4 = res[8] - res[9],
-                        P1_1.0 = res[5] - res[6],
-                        P2_1.0 = res[11] - res[12],
-                        P3_1.0 = res[13] - res[14],
-                        P4_1.0 = res[8] - res[9],
-                        Ze_1.0 = res[6] - res[11] + res[12] - res[13] + res[14] - res[8],
-                        P1_2.0 = res[10] - res[11],
-                        P2_2.0 = res[11] - res[12],
-                        P3_2.0 = res[13] - res[14],
-                        P4_2.0 = res[14] - res[15],
-                        Ze_2.0 = res[5] - res[10] + res[15] - res[9],
-                        P1_3.0 = res[16] - res[17],
-                        P2_3.0 = res[17] - res[18],
-                        P3_3.0 = res[18] - res[19],
-                        P4_3.0 = res[19] - res[20],
-                        Ze_3.0 = res[5] - res[16] + res[20] - res[9]
-                        )
-              )
-      }
+    for (a2 in alpha2) {
+        for (g7 in gamma7) {
+            for (r in rho) {
+                for (b3 in beta3) {
+                    set.seed(1234)
+                    res = generation(n = 1e7, 
+                                    rho = r, 
+                                    alpha = c(0.5, a2), 
+                                    beta = c(0.5, 0.5, b3, 2), 
+                                    gamma = c(1.5, 1.5, 1.5, 1.5, 1, 1, g7, 1), 
+                                    eps = list(c(0, 1), c(0, 1), c(0, 1)),
+                                    mode.z = mode.z,
+                                    mode.y = mode.y,
+                                    mode.m = mode.m)
+                    result = result %>%
+                            bind_rows(.,
+                        data.frame(a1 = a2,
+                                    g6 = g7,
+                                    rho = r,
+                                    beta2 = b3,
+                                    P1 = res[5] - res[6],
+                                    P2 = res[6] - res[7],
+                                    P3 = res[7] - res[8],
+                                    P4 = res[8] - res[9],
+                                    P1_1.0 = res[5] - res[6],
+                                    P2_1.0 = res[11] - res[12],
+                                    P3_1.0 = res[13] - res[14],
+                                    P4_1.0 = res[8] - res[9],
+                                    Ze_1.0 = res[6] - res[11] + res[12] - res[13] + res[14] - res[8],
+                                    diff_P2_1.0 = res[6] - res[7] - res[11] + res[12],
+                                    P1_2.0 = res[10] - res[11],
+                                    P2_2.0 = res[11] - res[12],
+                                    P3_2.0 = res[13] - res[14],
+                                    P4_2.0 = res[14] - res[15],
+                                    Ze_2.0 = res[5] - res[10] + res[15] - res[9],
+                                    diff_P2_2.0 = res[6] - res[7] - res[11] + res[12],
+                                    P1_3.0 = res[16] - res[17],
+                                    P2_3.0 = res[17] - res[18],
+                                    P3_3.0 = res[18] - res[19],
+                                    P4_3.0 = res[19] - res[20],
+                                    Ze_3.0 = res[5] - res[16] + res[20] - res[9],
+                                    diff_P2_3.0 = res[6] - res[7] - res[17] + res[18]
+                                    ))
+                }
+            }
+        }
     }
-  }
+    return(result)
 }
 
 ranking = function(data) {
@@ -196,9 +191,31 @@ ranking = function(data) {
   data[,c('P1_2.0','P2_2.0','P3_2.0','P4_2.0')] = re_2.0[,c('P1_2.0','P2_2.0','P3_2.0','P4_2.0')]
   data[,c('P1_3.0','P2_3.0','P3_3.0','P4_3.0')] = re_3.0[,c('P1_3.0','P2_3.0','P3_3.0','P4_3.0')]
 
-  return(data[,c('a1','g6','rho','beta2','Ze_1.0','Ze_2.0','Ze_3.0','P1','P2','P3','P4','P1_1.0','P2_1.0','P3_1.0','P4_1.0','P1_3.0','P2_3.0','P3_3.0','P4_3.0')])
+  return(data[,c('a1','g6','rho','beta2','Ze_1.0','Ze_2.0','Ze_3.0',
+                'P1','P2','P3','P4',
+                'P1_1.0','P2_1.0','P3_1.0','P4_1.0',
+                'P1_2.0','P2_2.0','P3_2.0','P4_2.0',
+                'P1_3.0','P2_3.0','P3_3.0','P4_3.0')])
 }
 
-write.csv(result, paste0('SimMMA_Simulation/res_Z',mode.z,'_M',mode.m,'_Y',mode.y,'.csv'))
-r = ranking(result)
-write.csv(r, paste0('SimMMA_Simulation/r_Z',mode.z,'_M',mode.m,'_Y',mode.y,'.csv'))
+
+#### setup
+alpha2 = c(-1.5, -0.5, 0.5, 1.5)
+gamma7 = c(-1.5, -1, 0, 1, 1.5)
+rho = c(-0.75, -0.2, 0.2, 0.75)
+beta3 = c(-1.5, -1, 1, 1.5)
+mode = c('con', 'bi')
+
+# export
+for (mode.z in mode) {
+    for (mode.m in mode) {
+        for (mode.y in mode) {
+            result = sim(mode.z=mode.z, mode.m=mode.m, mode.y=mode.y, alpha2=alpha2, gamma7=gamma7, beta3=beta3, rho=rho)
+            write.csv(result, paste0('SimMMA_Simulation/res_Z',mode.z,'_M',mode.m,'_Y',mode.y,'.csv'))
+            r = ranking(result)
+            write.csv(r, paste0('SimMMA_Simulation/r_Z',mode.z,'_M',mode.m,'_Y',mode.y,'.csv'))
+        }
+    }
+}
+
+
