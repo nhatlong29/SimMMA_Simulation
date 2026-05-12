@@ -155,6 +155,10 @@ sim = function(mode.z, mode.m, mode.y, alpha2, gamma7, beta3, rho) {
                                     P4_1.0 = res[8] - res[9],
                                     Ze_1.0 = res[6] - res[11] + res[12] - res[13] + res[14] - res[8],
                                     diff_P2_1.0 = res[6] - res[7] - res[11] + res[12],
+                                    bound_P2_1.0 = max(c(abs( max(c(-1,res[6]-res[8]-1)) - (res[11]-res[12]) ),
+                                                         abs( min(c(1,res[6]-res[8]+1)) - (res[11]-res[12])))),
+                                    bbound_P2_1.0 = 2 - (max(c(res[6],1-res[11],res[12])) - min(c(res[6],1-res[11],res[12])))
+                                                      - abs(res[11]-(1-res[12])),
                                     P1_2.0 = res[10] - res[11],
                                     P2_2.0 = res[11] - res[12],
                                     P3_2.0 = res[13] - res[14],
@@ -166,7 +170,11 @@ sim = function(mode.z, mode.m, mode.y, alpha2, gamma7, beta3, rho) {
                                     P3_3.0 = res[18] - res[19],
                                     P4_3.0 = res[19] - res[20],
                                     Ze_3.0 = res[5] - res[16] + res[20] - res[9],
-                                    diff_P2_3.0 = res[6] - res[7] - res[17] + res[18]
+                                    diff_P2_3.0 = res[6] - res[7] - res[17] + res[18],
+                                    bound_P2_3.0 = max(c(abs( max(c(-1,res[6]-res[8]-1)) - (res[17]-res[18]) ),
+                                                         abs( min(c(1,res[6]-res[8]+1)) - (res[17]-res[18])))),
+                                    bbound_P2_3.0 = 2 - (max(c(res[6],1-res[17],res[18])) - min(c(res[6],1-res[17],res[18])))
+                                                      - abs(res[17]-(1-res[18]))
                                     ))
                 }
             }
@@ -205,15 +213,17 @@ gamma7 = c(-1.5, -1, 0, 1, 1.5)
 rho = c(-0.75, -0.2, 0.2, 0.75)
 beta3 = c(-1.5, -1, 1, 1.5)
 mode = c('con', 'bi')
-
+modey = c('bi')
 # export
 for (mode.z in mode) {
     for (mode.m in mode) {
-        for (mode.y in mode) {
+        for (mode.y in modey) {
+            cat('Setting: z ',mode.z,' m ',mode.m,' y ',mode.y,' \r')
+            flush.console()
             result = sim(mode.z=mode.z, mode.m=mode.m, mode.y=mode.y, alpha2=alpha2, gamma7=gamma7, beta3=beta3, rho=rho)
-            write.csv(result, paste0('SimMMA_Simulation/res_Z',mode.z,'_M',mode.m,'_Y',mode.y,'.csv'))
+            write.csv(result, paste0('/work/ttkle/SimMMA_Simulation/res_Z',mode.z,'_M',mode.m,'_Y',mode.y,'upbound.csv'))
             r = ranking(result)
-            write.csv(r, paste0('SimMMA_Simulation/r_Z',mode.z,'_M',mode.m,'_Y',mode.y,'.csv'))
+            write.csv(r, paste0('/work/ttkle/SimMMA_Simulation/r_Z',mode.z,'_M',mode.m,'_Y',mode.y,'upbound.csv'))
         }
     }
 }
