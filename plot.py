@@ -409,7 +409,110 @@ def count_rank_and_sign_across_rho(typ, ver): # need to be updated.....
                     f.write(test.to_string() + '\n')
                     f.write('\n')
 #count_rank_and_sign_across_rho(typ='', ver="1.0")
+def count_bound():
+    df_all = pd.DataFrame()
+    for z in ['bi','con']:
+        for m in ['bi','con']:
+            for y in ['bi']:                       
+                df = pd.read_csv(f'res_Z{z}_M{m}_Y{y}upbound.csv')
+                df['Z'] = z
+                df['M'] = m
+                df['Y'] = y
+                df_all = pd.concat([df_all,df], axis=0, ignore_index=True)
+    df_all['abs_diff'] = np.abs(df_all['diff_P2_1.0'])
+    df_all['psiz'] = np.abs(df_all['bound_P2_1.0'] - np.abs(df_all['diff_P2_1.0']))
+    df_all['probb'] = np.abs(df_all['bbound_P2_1.0'] - np.abs(df_all['diff_P2_1.0']))
+    df_all.loc[df_all['psiz']>=df_all['probb'],'check'] = 1
+    df_all.loc[df_all['psiz']<df_all['probb'],'check'] = 0
+    
+    for z in ['bi','con']:
+        for m in ['bi','con']:
+            print(f'z {z} m {m}: {df_all.loc[((df_all['Z']==z)&(df_all['M']==m)),'check'].mean()}')
+    
+    cols = ['abs_diff', 'psiz', 'probb']
+    df_all["group"] = ("Z" + df_all["Z"].astype(str) +"_M" + df_all["M"].astype(str))
+    df_all = df_all.reset_index(drop=True)
+    df_all["id"] = df_all.index
+    # reshape wide -> long
+    df_long = df_all.melt(
+        id_vars=["id", "group"],
+        value_vars=cols,
+        var_name="Variable",
+        value_name="Value"
+    )
+    groups = df_long["group"].unique()
+    fig, axes = plt.subplots(2, len(groups), figsize=(18, 8), sharey=False)
+    thr = df_all["abs_diff"].median()
+    # -------------------------
+    # ROW 1: abs_diff → probb
+    # -------------------------
+    for j, grp in enumerate(groups):
+        ax = axes[0, j]
+        sub = df_long[df_long["group"] == grp]
+        wide = sub.pivot(index="id", columns="Variable", values="Value")
+        abs_vals = wide["abs_diff"]
+        for i, row in wide.iterrows():
+            color = "red" if abs_vals.loc[i] < thr else "blue"
+            ax.plot(
+                ["abs_diff", "probb"],
+                [row["abs_diff"], row["probb"]],
+                color=color,
+                alpha=0.2,
+                linewidth=1
+            )
+        ax.scatter(wide.index.map(lambda _: "abs_diff"),
+                wide["abs_diff"], s=10)
+        ax.scatter(wide.index.map(lambda _: "probb"),
+                wide["probb"], s=10)
+        ax.set_title(grp)
 
+    # -------------------------
+    # ROW 2: abs_diff → psiz
+    # -------------------------
+    for j, grp in enumerate(groups):
+        ax = axes[1, j]
+        sub = df_long[df_long["group"] == grp]
+        wide = sub.pivot(index="id", columns="Variable", values="Value")
+        abs_vals = wide["abs_diff"]
+        for i, row in wide.iterrows():
+            color = "red" if abs_vals.loc[i] < thr else "blue"
+            ax.plot(
+                ["abs_diff", "psiz"],
+                [row["abs_diff"], row["psiz"]],
+                color=color,
+                alpha=0.2,
+                linewidth=1
+            )
+        ax.scatter(wide.index.map(lambda _: "abs_diff"),
+                wide["abs_diff"], s=10)
+        ax.scatter(wide.index.map(lambda _: "psiz"),
+                wide["psiz"], s=10)
+    axes[0,0].set_ylabel("abs_diff → probb")
+    axes[1,0].set_ylabel("abs_diff → psiz")
+    plt.tight_layout()
+    plt.show()
+
+    """
+    plt.figure(figsize=(10,6))
+    for _, subdf in df_long.groupby("id"):
+        plt.plot(
+            subdf["Variable"],
+            subdf["Value"],
+            alpha=0.2,
+            linewidth=1
+        )
+    sns.scatterplot(
+        data=df_long,
+        x="Variable",
+        y="Value",
+        hue="group",
+        s=40
+    )
+    plt.title("Connected variables within rows")
+    plt.tight_layout()
+    plt.show()"""
+
+count_bound()
 
 def alpha_range(a0 = np.linspace(-5, 5, 100), a1 = np.linspace(-5, 5, 100), rho = np.linspace(-1, 1, 100)):    
     def f(a0, a1, rho, names : str):
@@ -490,9 +593,9 @@ def diff_p2_range_ver0(s1_1=np.linspace(0, 1, 100),
     cbar.set_label("bound value")
     plt.tight_layout()
     plt.show()
-diff_p2_range_ver0()
+#diff_p2_range_ver0()
 
-def diff_p2_range_ver1(s1_1=np.linspace(0, 1, 100),
+def diff_p2_range_ver1(typ, s1_1=np.linspace(0, 1, 100),
                        s1_prime_1=np.linspace(0, 1, 100),
                        s2_prime_1=np.linspace(0, 1, 100)):
     def f(a, b, c):
@@ -500,14 +603,29 @@ def diff_p2_range_ver1(s1_1=np.linspace(0, 1, 100),
         part1 = np.minimum.reduce([a, 1 - b, c])
         part2 = np.abs(b - (1 - c))
         return 2 - (part0 - part1) - part2
+    def f1(a, b, c):
+        part0 = np.abs((a-1) - (b-c))
+        part1 = np.abs(a - (b-c))
+        return np.maximum(part0,part1)
+    def f2(a, b, c):
+        part0 = np.abs(np.maximum(-1,a-1) - (b-c))
+        part1 = np.abs(np.minimum(1,a+1) - (b-c))
+        return np.maximum(part0,part1)
     
     S1, S2, S3 = np.meshgrid(s1_1, s1_prime_1, s2_prime_1, indexing='ij')
-    G = f(S1, S2, S3)
-    
+    if typ == 0:
+        G = f(S1, S2, S3)
+    elif typ == 1:
+        G = f1(S1, S2, S3)
+    else:
+        s1_1 = np.linspace(-1,1,100)
+        S1, S2, S3 = np.meshgrid(s1_1, s1_prime_1, s2_prime_1, indexing='ij')
+        G = f2(S1, S2, S3)
+        
     fig = plt.figure(figsize=(18, 6))
     
     # normalize for coloring
-    norm = plt.Normalize(G.min(), G.max())
+    norm = plt.Normalize(0, 2)
     
     ax = fig.add_subplot(131, projection='3d')
     sc = ax.scatter(
@@ -556,13 +674,16 @@ def diff_p2_range_ver1(s1_1=np.linspace(0, 1, 100),
     cbar.set_label("Bound value")
 
     for ax in [ax, ax1, ax2]:
-        ax.set_xlabel("s1_1")
+        if typ==0 or typ ==1:
+            ax.set_xlabel("s1_1")
+        else:
+            ax.set_xlabel("psi_z")
         ax.set_ylabel("s1'_1")
         ax.set_zlabel("s2'_1")
         ax.view_init(elev=10, azim=-30)
         
     plt.subplots_adjust(wspace=0.05, right=0.85)
-    plt.savefig(f'up/bound1.png', bbox_inches='tight')
+    plt.savefig(f'up/bound{typ}.png', bbox_inches='tight')
     #plt.show()
 
-#diff_p2_range_ver1()
+#diff_p2_range_ver1(typ=2)

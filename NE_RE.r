@@ -155,8 +155,9 @@ sim = function(mode.z, mode.m, mode.y, alpha2, gamma7, beta3, rho) {
                                     P4_1.0 = res[8] - res[9],
                                     Ze_1.0 = res[6] - res[11] + res[12] - res[13] + res[14] - res[8],
                                     diff_P2_1.0 = res[6] - res[7] - res[11] + res[12],
-                                    bound_P2_1.0 = max(c(abs( max(c(-1,res[6]-res[8]-1)) - (res[11]-res[12]) ),
+                                    psiz_bound_P2_1.0 = max(c(abs( max(c(-1,res[6]-res[8]-1)) - (res[11]-res[12]) ),
                                                          abs( min(c(1,res[6]-res[8]+1)) - (res[11]-res[12])))),
+                                    psi1_bound_P2_1.0 = max(c(abs((res[6]-1) - (res[11]-res[12])),abs(res[6] - (res[11]-res[12])))),
                                     bbound_P2_1.0 = 2 - (max(c(res[6],1-res[11],res[12])) - min(c(res[6],1-res[11],res[12])))
                                                       - abs(res[11]-(1-res[12])),
                                     P1_2.0 = res[10] - res[11],
@@ -171,8 +172,9 @@ sim = function(mode.z, mode.m, mode.y, alpha2, gamma7, beta3, rho) {
                                     P4_3.0 = res[19] - res[20],
                                     Ze_3.0 = res[5] - res[16] + res[20] - res[9],
                                     diff_P2_3.0 = res[6] - res[7] - res[17] + res[18],
-                                    bound_P2_3.0 = max(c(abs( max(c(-1,res[6]-res[8]-1)) - (res[17]-res[18]) ),
+                                    psiz_bound_P2_3.0 = max(c(abs( max(c(-1,res[6]-res[8]-1)) - (res[17]-res[18]) ),
                                                          abs( min(c(1,res[6]-res[8]+1)) - (res[17]-res[18])))),
+                                    psi1_bound_P2_3.0 = max(c(abs((res[6]-1) - (res[17]-res[18])),abs(res[6] - (res[17]-res[18])))),
                                     bbound_P2_3.0 = 2 - (max(c(res[6],1-res[17],res[18])) - min(c(res[6],1-res[17],res[18])))
                                                       - abs(res[17]-(1-res[18]))
                                     ))
