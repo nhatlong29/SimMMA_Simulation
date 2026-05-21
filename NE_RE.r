@@ -102,29 +102,7 @@ generation = function(n, rho, alpha, beta, gamma, eps, mode.z, mode.y, mode.m) {
                             Ys0.star, Ys1.star, Ys2.star, Ys3.star, Ys4.star)))
 }
 sim = function(mode.z, mode.m, mode.y, alpha2, gamma7, beta3, rho) {
-    result = data.frame(a1 = c(),
-                    g6 = c(),
-                    r = c(),
-                    beta2 = c(),
-                    P1 = c(),
-                    P2 = c(),
-                    P3 = c(),
-                    P4 = c(),
-                    P1_1.0 = c(),
-                    P2_1.0 = c(),
-                    P3_1.0 = c(),
-                    P4_1.0 = c(),
-                    Ze_1.0 = c(),
-                    P1_2.0 = c(),
-                    P2_2.0 = c(),
-                    P3_2.0 = c(),
-                    P4_2.0 = c(),
-                    Ze_2.0 = c(),
-                    P1_3.0 = c(),
-                    P2_3.0 = c(),
-                    P3_3.0 = c(),
-                    P4_3.0 = c(),
-                    Ze_3.0 = c())
+    result = data.frame()
     for (a2 in alpha2) {
         for (g7 in gamma7) {
             for (r in rho) {
@@ -141,42 +119,33 @@ sim = function(mode.z, mode.m, mode.y, alpha2, gamma7, beta3, rho) {
                                     mode.m = mode.m)
                     result = result %>%
                             bind_rows(.,
-                        data.frame(a1 = a2,
-                                    g6 = g7,
-                                    rho = r,
-                                    beta2 = b3,
-                                    P1 = res[5] - res[6],
-                                    P2 = res[6] - res[7],
-                                    P3 = res[7] - res[8],
-                                    P4 = res[8] - res[9],
-                                    P1_1.0 = res[5] - res[6],
-                                    P2_1.0 = res[11] - res[12],
-                                    P3_1.0 = res[13] - res[14],
-                                    P4_1.0 = res[8] - res[9],
+                        data.frame(a1 = a2, g6 = g7, rho = r, beta2 = b3,
+                                    Ys0 = res[5], Ys1 = res[6], Ys2 = res[7], Ys3 = res[8], Ys4 = res[9],
+                                    Ys0.prime = res[10], Ys1.prime = res[11], Ys2.prime = res[12], Ys2.dprime = res[13], Ys3.dprime = res[14], Ys4.dprime = res[15],
+                                    Ys0.star = res[16], Ys1.star = res[17], Ys2.star = res[18], Ys3.star = res[19], Ys4.star = res[20],
+                                    P1 = res[5] - res[6], P2 = res[6] - res[7], P3 = res[7] - res[8], P4 = res[8] - res[9],
+                                    P1_1.0 = res[5] - res[6], P2_1.0 = res[11] - res[12], P3_1.0 = res[13] - res[14], P4_1.0 = res[8] - res[9],
                                     Ze_1.0 = res[6] - res[11] + res[12] - res[13] + res[14] - res[8],
+
                                     diff_P2_1.0 = res[6] - res[7] - res[11] + res[12],
-                                    psiz_bound_P2_1.0 = max(c(abs( max(c(-1,res[6]-res[8]-1)) - (res[11]-res[12]) ),
-                                                         abs( min(c(1,res[6]-res[8]+1)) - (res[11]-res[12])))),
-                                    psi1_bound_P2_1.0 = max(c(abs((res[6]-1) - (res[11]-res[12])),abs(res[6] - (res[11]-res[12])))),
-                                    bbound_P2_1.0 = 2 - (max(c(res[6],1-res[11],res[12])) - min(c(res[6],1-res[11],res[12])))
-                                                      - abs(res[11]-(1-res[12])),
-                                    P1_2.0 = res[10] - res[11],
-                                    P2_2.0 = res[11] - res[12],
-                                    P3_2.0 = res[13] - res[14],
-                                    P4_2.0 = res[14] - res[15],
+                                    diff_PZ_1.0 = abs( res[6] - res[8] - res[11] + res[14]),
+                                    uppb_P2_z_1.0 = max(c(abs( max(c(-1,res[6]-res[8]-1)) - (res[11]-res[12])), abs( min(c(1,res[6]-res[8]+1)) - (res[11]-res[12])))),
+                                    uppb_P2_1_1.0 = max(c(abs((res[6]-1) - (res[11]-res[12])),abs(res[6] - (res[11]-res[12])))),
+                                    uppb_P2_bo_1.0 = 2 + min(c(res[6],1-res[11],res[12])) - max(c(res[6],1-res[11],res[12])) - abs(res[12]-(1-res[11])),
+                                    uppb_P2_bn_1.0 = 2 + min(c(res[6],1-res[11],res[12])) - max(c(res[6],1-res[11],res[12])) - max( abs(res[12]-(1-res[11])), abs(res[6]-(1-res[11])) ),
+
+                                    uppb_P3_z_1.0 = max(c(abs( max(c(-1,res[6]-res[8]-1)) - (res[13]-res[14])), abs( min(c(1,res[6]-res[8]+1)) - (res[13]-res[14])))),
+                                    uppb_P3_1_1.0 = max(c(abs((1-res[8]) - (res[13]-res[14])),abs(- res[8] - (res[13]-res[14])))),
+                                    uppb_P3_bo_1.0 = 2 + min(c(res[8],res[13],1-res[14])) - max(c(res[8],res[13],1-res[14])) - abs(res[13]-(1-res[14])),
+                                    uppb_P3_bn_1.0 = 2 + min(c(res[8],res[13],1-res[14])) - max(c(res[8],res[13],1-res[14])) - max( abs(res[13]-(1-res[14])), abs(res[8]-(1-res[14])) ),
+
+                                    P1_2.0 = res[10] - res[11], P2_2.0 = res[11] - res[12], P3_2.0 = res[13] - res[14], P4_2.0 = res[14] - res[15],
                                     Ze_2.0 = res[5] - res[10] + res[15] - res[9],
                                     diff_P2_2.0 = res[6] - res[7] - res[11] + res[12],
-                                    P1_3.0 = res[16] - res[17],
-                                    P2_3.0 = res[17] - res[18],
-                                    P3_3.0 = res[18] - res[19],
-                                    P4_3.0 = res[19] - res[20],
+                                    
+                                    P1_3.0 = res[16] - res[17], P2_3.0 = res[17] - res[18], P3_3.0 = res[18] - res[19], P4_3.0 = res[19] - res[20],
                                     Ze_3.0 = res[5] - res[16] + res[20] - res[9],
-                                    diff_P2_3.0 = res[6] - res[7] - res[17] + res[18],
-                                    psiz_bound_P2_3.0 = max(c(abs( max(c(-1,res[6]-res[8]-1)) - (res[17]-res[18]) ),
-                                                         abs( min(c(1,res[6]-res[8]+1)) - (res[17]-res[18])))),
-                                    psi1_bound_P2_3.0 = max(c(abs((res[6]-1) - (res[17]-res[18])),abs(res[6] - (res[17]-res[18])))),
-                                    bbound_P2_3.0 = 2 - (max(c(res[6],1-res[17],res[18])) - min(c(res[6],1-res[17],res[18])))
-                                                      - abs(res[17]-(1-res[18]))
+                                    diff_P2_3.0 = res[6] - res[7] - res[17] + res[18]
                                     ))
                 }
             }
@@ -230,4 +199,26 @@ for (mode.z in mode) {
     }
 }
 
+if (FALSE) {
+alpha2 = c(-1.5)
+gamma7 = c(1.5)
+rho = c(-0.75)
+beta3 = c(1)
+mode = c('con')
+modey = c('bi')
+# export
+for (mode.z in mode) {
+    for (mode.m in mode) {
+        for (mode.y in modey) {
+            cat('Setting: z ',mode.z,' m ',mode.m,' y ',mode.y,' \r')
+            flush.console()
+            result = sim(mode.z=mode.z, mode.m=mode.m, mode.y=mode.y, alpha2=alpha2, gamma7=gamma7, beta3=beta3, rho=rho)
+            print(result)
+            #write.csv(result, paste0('/work/ttkle/SimMMA_Simulation/res_Z',mode.z,'_M',mode.m,'_Y',mode.y,'upbound.csv'))
+            r = ranking(result)
+            #write.csv(r, paste0('/work/ttkle/SimMMA_Simulation/r_Z',mode.z,'_M',mode.m,'_Y',mode.y,'upbound.csv'))
+        }
+    }
+}
 
+}

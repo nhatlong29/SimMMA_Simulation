@@ -81,7 +81,7 @@ def plot_rank_across_rho(z, m, y, typ, sz):
         ax.grid(True)
         ax.view_init(elev=23, azim=-77)
     plt.tight_layout()
-    #plt.savefig(f'rank_{sz}_Z{z}_M{m}_Y{y}{typ}.png', bbox_inches='tight')
+    #plt.savefig(f'rank_{sz}_Z{z}_M{m}_Y{y}{typ}.jpeg', bbox_inches='tight', dpi=900)
     plt.show()
 #plot_rank_across_rho(z = 'con', m='con', y='con', typ='', sz = 'Z_e')
 def plot_sign_across_rho(z, m, y, sign_column, typ, sz=None):
@@ -161,7 +161,7 @@ def plot_sign_across_rho(z, m, y, sign_column, typ, sz=None):
         ax.grid(True)
         ax.view_init(elev=23, azim=-77)
     plt.tight_layout()
-    #plt.savefig(f'up/{sign_column}_{sz}_Z{z}_M{m}_Y{y}{typ}.png', bbox_inches='tight')
+    #plt.savefig(f'up/{sign_column}_{sz}_Z{z}_M{m}_Y{y}{typ}.jpeg', bbox_inches='tight', dpi=900)
     plt.show()
 
 def plot_combined(z, m, y, typ, sz, ver):
@@ -301,7 +301,7 @@ def plot_combined(z, m, y, typ, sz, ver):
         ax.tick_params(axis='both', labelsize=12)
     plt.tight_layout(rect=[0.1, 0, 1, 1], pad=1.0, w_pad=-1, h_pad=0)
     plt.subplots_adjust(left=0.12, right=0.98, top=0.92, bottom=0.08, wspace=-0.3, hspace=0.15)
-    plt.savefig(f'up/{sz}_Z{z}_M{m}_Y{y}{typ}_ver{ver}.png', bbox_inches='tight')
+    plt.savefig(f'up/{sz}_Z{z}_M{m}_Y{y}{typ}_ver{ver}.jpeg', bbox_inches='tight', dpi=900)
     #plt.show()
     # export data
     df_out = pd.merge(left=data, right=r[['a1','g6','beta2','rho','n_rdiff','val_rdiff']], how='outer', on=['a1','g6','beta2','rho'])
@@ -420,17 +420,18 @@ def count_bound():
                 df['Y'] = y
                 df_all = pd.concat([df_all,df], axis=0, ignore_index=True)
     df_all['abs_diff'] = np.abs(df_all['diff_P2_1.0'])
-    df_all['psiz'] = np.abs(df_all['bound_P2_1.0'] - np.abs(df_all['diff_P2_1.0']))
-    df_all['probb'] = np.abs(df_all['bbound_P2_1.0'] - np.abs(df_all['diff_P2_1.0']))
-    df_all.loc[df_all['psiz']>=df_all['probb'],'check'] = 1
-    df_all.loc[df_all['psiz']<df_all['probb'],'check'] = 0
-    
+    df_all['psiz'] = df_all['psiz_bound_P2_1.0']
+    df_all['psi1'] = df_all['psi1_bound_P2_1.0']
+    df_all['probb'] = df_all['bbound_P2_1.0']
+    df_all['agg'] = df_all[['psiz','psi1','probb']].min(axis=1)
+    df_all['check'] = df_all[['psiz','psi1','probb']].idxmin(axis=1)
     for z in ['bi','con']:
         for m in ['bi','con']:
-            print(f'z {z} m {m}: {df_all.loc[((df_all['Z']==z)&(df_all['M']==m)),'check'].mean()}')
-    
-    cols = ['abs_diff', 'psiz', 'probb']
-    df_all["group"] = ("Z" + df_all["Z"].astype(str) +"_M" + df_all["M"].astype(str))
+            print(len(df_all[(df_all['Z']==z)&(df_all['M']==m)]))
+            print(f'z {z} m {m}: {df_all.loc[((df_all['Z']==z)&(df_all['M']==m)),'check'].value_counts()}')
+    cols = ['abs_diff', 'psiz', 'psi1', 'probb', 'agg']
+    df_all["group"] = ("Z " + df_all["Z"].map({"bi": "binary", "con": "continuous"})
+                       + " M " + df_all["M"].map({"bi": "binary", "con": "continuous"}))
     df_all = df_all.reset_index(drop=True)
     df_all["id"] = df_all.index
     # reshape wide -> long
@@ -441,76 +442,33 @@ def count_bound():
         value_name="Value"
     )
     groups = df_long["group"].unique()
-    fig, axes = plt.subplots(2, len(groups), figsize=(18, 8), sharey=False)
-    thr = df_all["abs_diff"].median()
-    # -------------------------
-    # ROW 1: abs_diff → probb
-    # -------------------------
-    for j, grp in enumerate(groups):
-        ax = axes[0, j]
-        sub = df_long[df_long["group"] == grp]
-        wide = sub.pivot(index="id", columns="Variable", values="Value")
-        abs_vals = wide["abs_diff"]
-        for i, row in wide.iterrows():
-            color = "red" if abs_vals.loc[i] < thr else "blue"
-            ax.plot(
-                ["abs_diff", "probb"],
-                [row["abs_diff"], row["probb"]],
-                color=color,
-                alpha=0.2,
-                linewidth=1
-            )
-        ax.scatter(wide.index.map(lambda _: "abs_diff"),
-                wide["abs_diff"], s=10)
-        ax.scatter(wide.index.map(lambda _: "probb"),
-                wide["probb"], s=10)
-        ax.set_title(grp)
-
-    # -------------------------
-    # ROW 2: abs_diff → psiz
-    # -------------------------
-    for j, grp in enumerate(groups):
-        ax = axes[1, j]
-        sub = df_long[df_long["group"] == grp]
-        wide = sub.pivot(index="id", columns="Variable", values="Value")
-        abs_vals = wide["abs_diff"]
-        for i, row in wide.iterrows():
-            color = "red" if abs_vals.loc[i] < thr else "blue"
-            ax.plot(
-                ["abs_diff", "psiz"],
-                [row["abs_diff"], row["psiz"]],
-                color=color,
-                alpha=0.2,
-                linewidth=1
-            )
-        ax.scatter(wide.index.map(lambda _: "abs_diff"),
-                wide["abs_diff"], s=10)
-        ax.scatter(wide.index.map(lambda _: "psiz"),
-                wide["psiz"], s=10)
-    axes[0,0].set_ylabel("abs_diff → probb")
-    axes[1,0].set_ylabel("abs_diff → psiz")
+    fig, axes = plt.subplots(len(cols)-1, len(groups), figsize=(18, 12), sharey=False)
+    thr = df_all[cols[0]].median()
+    for tar in range(len(cols)-1):
+        for j, grp in enumerate(groups):
+            ax = axes[tar, j]
+            sub = df_long[df_long["group"] == grp]
+            wide = sub.pivot(index="id", columns="Variable", values="Value")
+            abs_vals = wide[cols[0]]
+            for i, row in wide.iterrows():
+                color = "red" if abs_vals.loc[i] < thr else "blue"
+                ax.plot(
+                    [cols[0], cols[tar+1]],
+                    [row[cols[0]], row[cols[tar+1]]],
+                    color=color,
+                    alpha=0.2,
+                    linewidth=1
+                )
+            ax.set_ylim(-0.1, 1.7)
+            ax.scatter(wide.index.map(lambda _: cols[0]),
+                    wide[cols[0]], s=10)
+            ax.scatter(wide.index.map(lambda _: cols[tar+1]),
+                    wide[cols[tar+1]], s=10)
+            ax.set_title(grp)
+        axes[tar,0].set_ylabel(f"{cols[0]} → {cols[tar+1]}")
     plt.tight_layout()
+    plt.savefig(f'up/bound.jpeg', bbox_inches='tight', dpi=900)
     plt.show()
-
-    """
-    plt.figure(figsize=(10,6))
-    for _, subdf in df_long.groupby("id"):
-        plt.plot(
-            subdf["Variable"],
-            subdf["Value"],
-            alpha=0.2,
-            linewidth=1
-        )
-    sns.scatterplot(
-        data=df_long,
-        x="Variable",
-        y="Value",
-        hue="group",
-        s=40
-    )
-    plt.title("Connected variables within rows")
-    plt.tight_layout()
-    plt.show()"""
 
 count_bound()
 
@@ -543,7 +501,7 @@ def alpha_range(a0 = np.linspace(-5, 5, 100), a1 = np.linspace(-5, 5, 100), rho 
     ax.set_zlabel('rho')
     #ax.set_title('Available region')
     ax.view_init(elev=50, azim=-60)
-    #plt.savefig(f'up/a0_a1_ ranging.png', bbox_inches='tight')
+    #plt.savefig(f'up/a0_a1_ ranging.jpeg', bbox_inches='tight', dpi=900)
     plt.show()
 
 def diff_p2_range_ver0(s1_1=np.linspace(0, 1, 100),
@@ -683,7 +641,7 @@ def diff_p2_range_ver1(typ, s1_1=np.linspace(0, 1, 100),
         ax.view_init(elev=10, azim=-30)
         
     plt.subplots_adjust(wspace=0.05, right=0.85)
-    plt.savefig(f'up/bound{typ}.png', bbox_inches='tight')
+    plt.savefig(f'up/bound{typ}.jpeg', bbox_inches='tight', dpi=900)
     #plt.show()
 
 #diff_p2_range_ver1(typ=2)
