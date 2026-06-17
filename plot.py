@@ -419,17 +419,28 @@ def count_bound():
                 df['M'] = m
                 df['Y'] = y
                 df_all = pd.concat([df_all,df], axis=0, ignore_index=True)
+       
     df_all['abs_diff'] = np.abs(df_all['diff_P2_1.0'])
-    df_all['psiz'] = df_all['psiz_bound_P2_1.0']
-    df_all['psi1'] = df_all['psi1_bound_P2_1.0']
-    df_all['probb'] = df_all['bbound_P2_1.0']
-    df_all['agg'] = df_all[['psiz','psi1','probb']].min(axis=1)
-    df_all['check'] = df_all[['psiz','psi1','probb']].idxmin(axis=1)
+    df_all['upboundZ'] = df_all['uppb_P2_z_1.0']
+    df_all['upbound1'] = df_all['uppb_P2_1_1.0']
+    df_all['upboundbo'] = df_all['uppb_P2_bo_1.0']
+    df_all['upboundbn'] = df_all['uppb_P2_bn_1.0']
+    df_all['upboundopt'] = df_all[['upboundZ','upbound1','upboundbo','upboundbn']].min(axis=1)
+    
+    df_all['lwboundZ'] = df_all['diff_PZ_1.0'] - df_all['uppb_P3_z_1.0']
+    df_all['lwbound1'] = df_all['diff_PZ_1.0'] - df_all['uppb_P3_1_1.0']
+    df_all['lwboundbo'] = df_all['diff_PZ_1.0'] - df_all['uppb_P3_bo_1.0']
+    df_all['lwboundbn'] = df_all['diff_PZ_1.0'] - df_all['uppb_P3_bn_1.0']
+    df_all['lwboundopt'] = df_all['diff_PZ_1.0'] - df_all[['uppb_P3_z_1.0','uppb_P3_1_1.0','uppb_P3_bo_1.0','uppb_P3_bn_1.0']].min(axis=1)
+    
+    cols = ['abs_diff', 'upboundZ', 'upbound1', 'upboundbo', 'upboundbn', 'upboundopt', 'lwboundZ', 'lwbound1', 'lwboundbo', 'lwboundbn', 'lwboundopt']
+    df_all['checkup'] = df_all[['upboundZ','upbound1','upboundbn']].idxmin(axis=1)
+    df_all['checklw'] = df_all[['lwboundZ','lwbound1','lwboundbn']].idxmax(axis=1)
     for z in ['bi','con']:
         for m in ['bi','con']:
             print(len(df_all[(df_all['Z']==z)&(df_all['M']==m)]))
-            print(f'z {z} m {m}: {df_all.loc[((df_all['Z']==z)&(df_all['M']==m)),'check'].value_counts()}')
-    cols = ['abs_diff', 'psiz', 'psi1', 'probb', 'agg']
+            print(f'z {z} m {m}: {df_all.loc[((df_all['Z']==z)&(df_all['M']==m)),'checkup'].value_counts()}')
+            print(f'z {z} m {m}: {df_all.loc[((df_all['Z']==z)&(df_all['M']==m)),'checklw'].value_counts()}')
     df_all["group"] = ("Z " + df_all["Z"].map({"bi": "binary", "con": "continuous"})
                        + " M " + df_all["M"].map({"bi": "binary", "con": "continuous"}))
     df_all = df_all.reset_index(drop=True)
@@ -442,9 +453,9 @@ def count_bound():
         value_name="Value"
     )
     groups = df_long["group"].unique()
-    fig, axes = plt.subplots(len(cols)-1, len(groups), figsize=(18, 12), sharey=False)
+    fig, axes = plt.subplots(int((len(cols)-1)/2), len(groups), figsize=(24, 3*(len(cols)-1)/2), sharey=False)
     thr = df_all[cols[0]].median()
-    for tar in range(len(cols)-1):
+    for tar in range(int((len(cols)-1)/2)):
         for j, grp in enumerate(groups):
             ax = axes[tar, j]
             sub = df_long[df_long["group"] == grp]
@@ -453,25 +464,85 @@ def count_bound():
             for i, row in wide.iterrows():
                 color = "red" if abs_vals.loc[i] < thr else "blue"
                 ax.plot(
-                    [cols[0], cols[tar+1]],
-                    [row[cols[0]], row[cols[tar+1]]],
+                    [cols[tar+int((len(cols)-1)/2+1)],cols[0], cols[tar+1]],
+                    [row[cols[tar+int((len(cols)-1)/2+1)]], row[cols[0]], row[cols[tar+1]]],
                     color=color,
                     alpha=0.2,
                     linewidth=1
                 )
-            ax.set_ylim(-0.1, 1.7)
+            ax.set_ylim(-1.7, 1.7)
             ax.scatter(wide.index.map(lambda _: cols[0]),
                     wide[cols[0]], s=10)
             ax.scatter(wide.index.map(lambda _: cols[tar+1]),
                     wide[cols[tar+1]], s=10)
+            ax.scatter(wide.index.map(lambda _: cols[tar+int((len(cols)-1)/2+1)]),
+                    wide[cols[tar+int((len(cols)-1)/2+1)]], s=10)
             ax.set_title(grp)
         axes[tar,0].set_ylabel(f"{cols[0]} → {cols[tar+1]}")
     plt.tight_layout()
-    plt.savefig(f'up/bound.jpeg', bbox_inches='tight', dpi=900)
+    #plt.savefig(f'up/bound.jpeg', bbox_inches='tight', dpi=900)
     plt.show()
+#count_bound()
 
-count_bound()
-
+def final_bound():
+    df_all = pd.DataFrame()
+    for z in ['bi','con']:
+        for m in ['bi','con']:
+            for y in ['bi']:                       
+                df = pd.read_csv(f'res_Z{z}_M{m}_Y{y}upbound.csv')
+                df['Z'] = z
+                df['M'] = m
+                df['Y'] = y
+                df_all = pd.concat([df_all,df], axis=0, ignore_index=True)
+       
+    df_all['Absolute difference'] = np.abs(df_all['diff_P2_1.0'])
+    df_all['upboundZ'] = df_all['uppb_P2_z_1.0']
+    df_all['upbound1'] = df_all['uppb_P2_1_1.0']
+    df_all['upboundbo'] = df_all['uppb_P2_bo_1.0']
+    df_all['upboundbn'] = df_all['uppb_P2_bn_1.0']
+    df_all['Optimal upper bound'] = df_all[['upboundZ','upbound1','upboundbo','upboundbn']].min(axis=1)
+        
+    cols = ['Absolute difference', 'Optimal upper bound']
+    df_all["group"] = (df_all["Z"].map({"bi": "Binary", "con": "Continuous"}) + " Z, " 
+                       + df_all["M"].map({"bi": "binary", "con": "continuous"}) + " M" )
+    df_all = df_all.reset_index(drop=True)
+    df_all["id"] = df_all.index
+    # reshape wide -> long
+    df_long = df_all.melt(
+        id_vars=["id", "group"],
+        value_vars=cols,
+        var_name="Variable",
+        value_name="Value"
+    )
+    groups = df_long["group"].unique()
+    fig, axes = plt.subplots(2, 2, figsize=(16, 8), sharey=False)
+    thr = df_all[cols[0]].median()
+    
+    for j, grp in enumerate(groups):
+        ax = axes[0 if j<=1 else 1, 0 if j%2==0 else 1]
+        sub = df_long[df_long["group"] == grp]
+        wide = sub.pivot(index="id", columns="Variable", values="Value")
+        abs_vals = wide[cols[0]]
+        for i, row in wide.iterrows():
+            color = "red" if abs_vals.loc[i] < thr else "blue"
+            ax.plot(
+                [cols[0], cols[1]],
+                [row[cols[0]], row[cols[1]]],
+                color=color,
+                alpha=0.2,
+                linewidth=1
+            )
+        ax.set_ylim(-0.1, 1.0)
+        ax.scatter(wide.index.map(lambda _: cols[0]),
+                wide[cols[0]], s=10)
+        ax.scatter(wide.index.map(lambda _: cols[1]),
+                wide[cols[1]], s=10)
+        ax.set_title(grp, fontweight='bold')
+    plt.tight_layout()
+    plt.savefig(f'up/optupbound.jpeg', bbox_inches='tight', dpi=900)
+    plt.show()
+final_bound()
+    
 def alpha_range(a0 = np.linspace(-5, 5, 100), a1 = np.linspace(-5, 5, 100), rho = np.linspace(-1, 1, 100)):    
     def f(a0, a1, rho, names : str):
         mu0 = np.exp(a0)/(1+np.exp(a0))
