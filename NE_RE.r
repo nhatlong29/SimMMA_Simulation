@@ -1,5 +1,4 @@
-library(MASS)
-library(dplyr)
+library(parallel)
 
 expit = function(x) {exp(x)/(1+exp(x))}
 
@@ -101,58 +100,6 @@ generation = function(n, rho, alpha, beta, gamma, eps, mode.z, mode.y, mode.m) {
                             Ys0.prime, Ys1.prime, Ys2.prime, Ys2.dprime, Ys3.dprime, Ys4.dprime,
                             Ys0.star, Ys1.star, Ys2.star, Ys3.star, Ys4.star)))
 }
-sim = function(mode.z, mode.m, mode.y, alpha2, gamma7, beta3, rho) {
-    result = data.frame()
-    for (a2 in alpha2) {
-        for (g7 in gamma7) {
-            for (r in rho) {
-                for (b3 in beta3) {
-                    set.seed(1234)
-                    res = generation(n = 1e7, 
-                                    rho = r, 
-                                    alpha = c(0.5, a2), 
-                                    beta = c(0.5, 0.5, b3, 2), 
-                                    gamma = c(1.5, 1.5, 1.5, 1.5, 1, 1, g7, 1), 
-                                    eps = list(c(0, 1), c(0, 1), c(0, 1)),
-                                    mode.z = mode.z,
-                                    mode.y = mode.y,
-                                    mode.m = mode.m)
-                    result = result %>%
-                            bind_rows(.,
-                        data.frame(a1 = a2, g6 = g7, rho = r, beta2 = b3,
-                                    Ys0 = res[5], Ys1 = res[6], Ys2 = res[7], Ys3 = res[8], Ys4 = res[9],
-                                    Ys0.prime = res[10], Ys1.prime = res[11], Ys2.prime = res[12], Ys2.dprime = res[13], Ys3.dprime = res[14], Ys4.dprime = res[15],
-                                    Ys0.star = res[16], Ys1.star = res[17], Ys2.star = res[18], Ys3.star = res[19], Ys4.star = res[20],
-                                    P1 = res[5] - res[6], P2 = res[6] - res[7], P3 = res[7] - res[8], P4 = res[8] - res[9],
-                                    P1_1.0 = res[5] - res[6], P2_1.0 = res[11] - res[12], P3_1.0 = res[13] - res[14], P4_1.0 = res[8] - res[9],
-                                    Ze_1.0 = res[6] - res[11] + res[12] - res[13] + res[14] - res[8],
-
-                                    diff_P2_1.0 = res[6] - res[7] - res[11] + res[12],
-                                    diff_PZ_1.0 = abs( res[6] - res[8] - res[11] + res[14]),
-                                    uppb_P2_z_1.0 = max(c(abs( max(c(-1,res[6]-res[8]-1)) - (res[11]-res[12])), abs( min(c(1,res[6]-res[8]+1)) - (res[11]-res[12])))),
-                                    uppb_P2_1_1.0 = max(c(abs((res[6]-1) - (res[11]-res[12])),abs(res[6] - (res[11]-res[12])))),
-                                    uppb_P2_bo_1.0 = 2 + min(c(res[6],1-res[11],res[12])) - max(c(res[6],1-res[11],res[12])) - abs(res[12]-(1-res[11])),
-                                    uppb_P2_bn_1.0 = 2 + min(c(res[6],1-res[11],res[12])) - max(c(res[6],1-res[11],res[12])) - max( abs(res[12]-(1-res[11])), abs(res[6]-(1-res[11])) ),
-
-                                    uppb_P3_z_1.0 = max(c(abs( max(c(-1,res[6]-res[8]-1)) - (res[13]-res[14])), abs( min(c(1,res[6]-res[8]+1)) - (res[13]-res[14])))),
-                                    uppb_P3_1_1.0 = max(c(abs((1-res[8]) - (res[13]-res[14])),abs(- res[8] - (res[13]-res[14])))),
-                                    uppb_P3_bo_1.0 = 2 + min(c(res[8],res[13],1-res[14])) - max(c(res[8],res[13],1-res[14])) - abs(res[13]-(1-res[14])),
-                                    uppb_P3_bn_1.0 = 2 + min(c(res[8],res[13],1-res[14])) - max(c(res[8],res[13],1-res[14])) - max( abs(res[13]-(1-res[14])), abs(res[8]-(1-res[14])) ),
-
-                                    P1_2.0 = res[10] - res[11], P2_2.0 = res[11] - res[12], P3_2.0 = res[13] - res[14], P4_2.0 = res[14] - res[15],
-                                    Ze_2.0 = res[5] - res[10] + res[15] - res[9],
-                                    diff_P2_2.0 = res[6] - res[7] - res[11] + res[12],
-                                    
-                                    P1_3.0 = res[16] - res[17], P2_3.0 = res[17] - res[18], P3_3.0 = res[18] - res[19], P4_3.0 = res[19] - res[20],
-                                    Ze_3.0 = res[5] - res[16] + res[20] - res[9],
-                                    diff_P2_3.0 = res[6] - res[7] - res[17] + res[18]
-                                    ))
-                }
-            }
-        }
-    }
-    return(result)
-}
 
 ranking = function(data) {
   row.names(data) = NULL
@@ -170,55 +117,105 @@ ranking = function(data) {
   data[,c('P1_2.0','P2_2.0','P3_2.0','P4_2.0')] = re_2.0[,c('P1_2.0','P2_2.0','P3_2.0','P4_2.0')]
   data[,c('P1_3.0','P2_3.0','P3_3.0','P4_3.0')] = re_3.0[,c('P1_3.0','P2_3.0','P3_3.0','P4_3.0')]
 
-  return(data[,c('a1','g6','rho','beta2','Ze_1.0','Ze_2.0','Ze_3.0',
+  return(data[,c('mode.z','mode.m','mode.y',
+                'rho', 'alpha_1', 'beta_2', 'gamma_2', 'gamma_3', 'gamma_6',
+                'Ze_1.0','Ze_2.0','Ze_3.0',
                 'P1','P2','P3','P4',
                 'P1_1.0','P2_1.0','P3_1.0','P4_1.0',
                 'P1_2.0','P2_2.0','P3_2.0','P4_2.0',
                 'P1_3.0','P2_3.0','P3_3.0','P4_3.0')])
 }
-
-
-#### setup
-alpha2 = c(-1.5, -0.5, 0.5, 1.5)
-gamma7 = c(-1.5, -1, 0, 1, 1.5)
-rho = c(-0.75, -0.2, 0.2, 0.75)
-beta3 = c(-1.5, -1, 1, 1.5)
+n = 1e7
+rho = c(-0.2)
+alpha1 = c(-1.5,-1.0,-0.5,0,0.5,1.0,1.5)
+beta2 = c(-1.5,-1.0,-0.5,0,0.5,1.0,1.5)
+gamma2 = c(-1.5,-1.0,-0.5,0,0.5,1.0,1.5)
+gamma3 = c(-1.5,-1.0,-0.5,0,0.5,1.0,1.5)
+gamma6 = c(-1.5,-1.0,-0.5,0,0.5,1.0,1.5)
 mode = c('con', 'bi')
-modey = c('bi')
-# export
-for (mode.z in mode) {
-    for (mode.m in mode) {
-        for (mode.y in modey) {
-            cat('Setting: z ',mode.z,' m ',mode.m,' y ',mode.y,' \r')
-            flush.console()
-            result = sim(mode.z=mode.z, mode.m=mode.m, mode.y=mode.y, alpha2=alpha2, gamma7=gamma7, beta3=beta3, rho=rho)
-            write.csv(result, paste0('/work/ttkle/SimMMA_Simulation/res_Z',mode.z,'_M',mode.m,'_Y',mode.y,'upbound.csv'))
-            r = ranking(result)
-            write.csv(r, paste0('/work/ttkle/SimMMA_Simulation/r_Z',mode.z,'_M',mode.m,'_Y',mode.y,'upbound.csv'))
-        }
-    }
-}
+params = expand.grid(mode.z = mode,
+                    mode.m = mode,
+                    mode.y = 'bi',
+                    rho = rho,
+                    alpha_1 = alpha1,
+                    beta_2 = beta2,
+                    gamma_2 = gamma2,
+                    gamma_3 = gamma3,
+                    gamma_6 = gamma6)
 
-if (FALSE) {
-alpha2 = c(-1.5)
-gamma7 = c(1.5)
-rho = c(-0.75)
-beta3 = c(1)
-mode = c('con')
-modey = c('bi')
-# export
-for (mode.z in mode) {
-    for (mode.m in mode) {
-        for (mode.y in modey) {
-            cat('Setting: z ',mode.z,' m ',mode.m,' y ',mode.y,' \r')
-            flush.console()
-            result = sim(mode.z=mode.z, mode.m=mode.m, mode.y=mode.y, alpha2=alpha2, gamma7=gamma7, beta3=beta3, rho=rho)
-            print(result)
-            #write.csv(result, paste0('/work/ttkle/SimMMA_Simulation/res_Z',mode.z,'_M',mode.m,'_Y',mode.y,'upbound.csv'))
-            r = ranking(result)
-            #write.csv(r, paste0('/work/ttkle/SimMMA_Simulation/r_Z',mode.z,'_M',mode.m,'_Y',mode.y,'upbound.csv'))
-        }
-    }
-}
+nworkers <- detectCores()
+cl <- makeCluster(nworkers)
+tasks <- c(1:nworkers)
 
+worker <- function(task) {
+    result <- c()
+    indices <- split(c(1:nrow(params)), cut(c(1:nrow(params)), breaks = nworkers, labels = FALSE))[[task]]
+
+    for (i in indices) {
+        set.seed(1234)
+        r = params[i,"rho"]
+        a1 = params[i,"alpha_1"]
+        b2 = params[i,"beta_2"]
+        g2 = params[i,"gamma_2"]
+        g3 = params[i,"gamma_3"]
+        g6 = params[i,"gamma_6"]
+        mode.z = params[i,"mode.z"]
+        mode.y = params[i,"mode.y"]
+        mode.m = params[i,"mode.m"]
+        res = generation(n = n, 
+                        rho = r, 
+                        alpha = c(0.5, a1), 
+                        beta = c(0.5, 0.5, b2, 2), 
+                        gamma = c(1.5, 1.5, g2, g3, 1, 1, g6, 1), 
+                        eps = list(c(0, 1), c(0, 1), c(0, 1)),
+                        mode.z = mode.z,
+                        mode.y = mode.y,
+                        mode.m = mode.m)
+        result <- do.call(rbind, list(result,
+            data.frame(mode.z = mode.z, mode.y = mode.y, mode.m = mode.m,
+                        rho = r, alpha_1 = a1, beta_2 = b2, gamma_2 = g2, gamma_3 = g3, gamma_6 = g6, 
+                        Ys0 = res[5], Ys1 = res[6], Ys2 = res[7], Ys3 = res[8], Ys4 = res[9],
+                        Ys0.prime = res[10], Ys1.prime = res[11], Ys2.prime = res[12], Ys2.dprime = res[13], Ys3.dprime = res[14], Ys4.dprime = res[15],
+                        Ys0.star = res[16], Ys1.star = res[17], Ys2.star = res[18], Ys3.star = res[19], Ys4.star = res[20],
+                        P1 = res[5] - res[6], P2 = res[6] - res[7], P3 = res[7] - res[8], P4 = res[8] - res[9],
+                        P1_1.0 = res[5] - res[6], P2_1.0 = res[11] - res[12], P3_1.0 = res[13] - res[14], P4_1.0 = res[8] - res[9],
+                        Ze_1.0 = res[6] - res[11] + res[12] - res[13] + res[14] - res[8],
+
+                        diff_P2_1.0 = res[6] - res[7] - res[11] + res[12],
+                        diff_PZ_1.0 = abs( res[6] - res[8] - res[11] + res[14]),
+                        uppb_P2_z_1.0 = max(c(abs( max(c(-1,res[6]-res[8]-1)) - (res[11]-res[12])), abs( min(c(1,res[6]-res[8]+1)) - (res[11]-res[12])))),
+                        uppb_P2_1_1.0 = max(c(abs((res[6]-1) - (res[11]-res[12])),abs(res[6] - (res[11]-res[12])))),
+                        uppb_P2_bo_1.0 = 2 + min(c(res[6],1-res[11],res[12])) - max(c(res[6],1-res[11],res[12])) - abs(res[12]-(1-res[11])),
+                        uppb_P2_bn_1.0 = 2 + min(c(res[6],1-res[11],res[12])) - max(c(res[6],1-res[11],res[12])) - max( abs(res[12]-(1-res[11])), abs(res[6]-(1-res[11])) ),
+
+                        uppb_P3_z_1.0 = max(c(abs( max(c(-1,res[6]-res[8]-1)) - (res[13]-res[14])), abs( min(c(1,res[6]-res[8]+1)) - (res[13]-res[14])))),
+                        uppb_P3_1_1.0 = max(c(abs((1-res[8]) - (res[13]-res[14])),abs(- res[8] - (res[13]-res[14])))),
+                        uppb_P3_bo_1.0 = 2 + min(c(res[8],res[13],1-res[14])) - max(c(res[8],res[13],1-res[14])) - abs(res[13]-(1-res[14])),
+                        uppb_P3_bn_1.0 = 2 + min(c(res[8],res[13],1-res[14])) - max(c(res[8],res[13],1-res[14])) - max( abs(res[13]-(1-res[14])), abs(res[8]-(1-res[14])) ),
+
+                        P1_2.0 = res[10] - res[11], P2_2.0 = res[11] - res[12], P3_2.0 = res[13] - res[14], P4_2.0 = res[14] - res[15],
+                        Ze_2.0 = res[5] - res[10] + res[15] - res[9],
+                        diff_P2_2.0 = res[6] - res[7] - res[11] + res[12],
+                        
+                        P1_3.0 = res[16] - res[17], P2_3.0 = res[17] - res[18], P3_3.0 = res[18] - res[19], P4_3.0 = res[19] - res[20],
+                        Ze_3.0 = res[5] - res[16] + res[20] - res[9],
+                        diff_P2_3.0 = res[6] - res[7] - res[17] + res[18]
+                        )))
+    }
+    list(res = result)
 }
+clusterExport(cl, c("params", "n", "expit", "generation", "tasks", "worker", "nworkers"))
+
+clusterEvalQ(cl, {
+    library(MASS)
+    library(dplyr)
+    NULL
+})
+results <- parLapplyLB(cl, tasks, worker)
+stopCluster(cl)
+
+# Combine results from all workers
+final_result <- do.call(rbind, lapply(results, function(x) x$res))
+
+write.csv(final_result, paste0("res_rneg0.2_ybi.csv"))
+#write.csv(ranking(final_result), paste0("r_rneg0.2_ybi.csv"))

@@ -164,21 +164,21 @@ def plot_sign_across_rho(z, m, y, sign_column, typ, sz=None):
     #plt.savefig(f'up/{sign_column}_{sz}_Z{z}_M{m}_Y{y}{typ}.jpeg', bbox_inches='tight', dpi=900)
     plt.show()
 
-def plot_combined(z, m, y, typ, sz, ver):
+def plot_combined(z, m, y, sz, ver, typ=''):
     data = pd.read_csv(f'res_Z{z}_M{m}_Y{y}{typ}.csv')
     data['tol_re'] = data[[f'P1_{ver}',f'P2_{ver}',f'P3_{ver}',f'P4_{ver}',f'Ze_{ver}']].sum(axis=1)
     data['per_Ze'] = np.abs(data[f'Ze_{ver}'])/np.abs(data['tol_re'])
     data['mag_re'] = np.sum(np.abs(data[[f'P1_{ver}',f'P2_{ver}',f'P3_{ver}',f'P4_{ver}',f'Ze_{ver}']]),axis=1)
     data['per_magZe'] = np.abs(data[f'Ze_{ver}'])/np.abs(data['mag_re'])
-    if typ=='':
-        r = pd.read_csv(f'r_Z{z}_M{m}_Y{y}{typ}.csv')
-        r = pd.merge(r,data[['per_Ze','per_magZe']],left_index=True,right_index=True)
-        r[f'Ze_{ver}'] = np.abs(r[f'Ze_{ver}'])
-    else:
-        r = pd.read_csv(f'r_Z{z}_M{m}_Y{y}{typ}.csv')
-        r = pd.merge(r,data[['per_Ze','per_magZe',f'diff_P2_{ver}']],left_index=True,right_index=True)
-        r[f'Ze_{ver}'] = np.abs(r[f'Ze_{ver}'])
-        r[f'diff_P2_{ver}'] = np.abs(r[f'diff_P2_{ver}'])
+    #if typ=='':
+    r = pd.read_csv(f'r_Z{z}_M{m}_Y{y}{typ}.csv')
+    r = pd.merge(r,data[['per_Ze','per_magZe']],left_index=True,right_index=True)
+    r[f'Ze_{ver}'] = np.abs(r[f'Ze_{ver}'])
+    #else:
+    #    r = pd.read_csv(f'r_Z{z}_M{m}_Y{y}{typ}.csv')
+    #    r = pd.merge(r,data[['per_Ze','per_magZe',f'diff_P2_{ver}']],left_index=True,right_index=True)
+    #    r[f'Ze_{ver}'] = np.abs(r[f'Ze_{ver}'])
+    #    r[f'diff_P2_{ver}'] = np.abs(r[f'diff_P2_{ver}'])
     if isinstance(sz,str):
         r[f'{sz}_{ver}'] = r[f'{sz}_{ver}'].fillna(0)
         mask = (r[f'{sz}_{ver}']==0)
@@ -235,7 +235,7 @@ def plot_combined(z, m, y, typ, sz, ver):
     mask = data[['P3', f'P3_{ver}']].isnull().values.any(axis=1)
     data.loc[mask, f'P3_sign'] = 3
     data[f'Ze_{ver}'] = np.abs(data[f'Ze_{ver}'])
-    data[f'diff_P2_{ver}'] = np.abs(data[f'diff_P2_{ver}'])
+    #data[f'diff_P2_{ver}'] = np.abs(data[f'diff_P2_{ver}'])
     if isinstance(sz,str):
         data[f'{sz}_{ver}'] = data[f'{sz}_{ver}'].fillna(0)
         mask = (data[f'{sz}_{ver}']==0)
@@ -313,16 +313,16 @@ def plot_combined(z, m, y, typ, sz, ver):
 
 #df = plot_combined(z='con', m='con', y='bi', typ='upbound', sz='diff_P2', ver='1.0')
 # Usage
-"""
-sz = None
+
+"""sz = "Ze"
 df_all = pd.DataFrame()
 for z in ['bi','con']:
     for m in ['bi','con']:
         for y in ['bi','con']:
-            for ver in ['1.0','2.0','3.0']:
+            for ver in ['1.0']: #,'2.0','3.0'
                 df = plot_combined(z=z, m=m, y=y, sz=sz, ver=ver)
-                #df_all = pd.concat([df_all,df], axis=0, ignore_index=True)
-"""
+                #df_all = pd.concat([df_all,df], axis=0, ignore_index=True)"""
+
 def kount(data, sub, id, col):
     if not sub:
         subset = data
@@ -488,8 +488,8 @@ def final_bound():
     df_all = pd.DataFrame()
     for z in ['bi','con']:
         for m in ['bi','con']:
-            for y in ['bi']:                       
-                df = pd.read_csv(f'res_Z{z}_M{m}_Y{y}upbound.csv')
+            for y in ['bi']:
+                df = pd.read_csv(f'res_Z{z}_M{m}_Y{y}upbound_upfin.csv')
                 df['Z'] = z
                 df['M'] = m
                 df['Y'] = y
@@ -539,10 +539,10 @@ def final_bound():
                 wide[cols[1]], s=10)
         ax.set_title(grp, fontweight='bold')
     plt.tight_layout()
-    plt.savefig(f'up/optupbound.jpeg', bbox_inches='tight', dpi=900)
+    plt.savefig(f'up/optupbound_fin.jpeg', bbox_inches='tight', dpi=900)
     plt.show()
-final_bound()
-    
+#final_bound()
+
 def alpha_range(a0 = np.linspace(-5, 5, 100), a1 = np.linspace(-5, 5, 100), rho = np.linspace(-1, 1, 100)):    
     def f(a0, a1, rho, names : str):
         mu0 = np.exp(a0)/(1+np.exp(a0))
@@ -684,7 +684,6 @@ def diff_p2_range_ver1(typ, s1_1=np.linspace(0, 1, 100),
     )
     ax1.set_title("Bound < 1.0", pad=2)
     
-
     ax2 = fig.add_subplot(133, projection='3d')
     mask_high = G >= 1.0
     sc2 = ax2.scatter(
@@ -714,5 +713,263 @@ def diff_p2_range_ver1(typ, s1_1=np.linspace(0, 1, 100),
     plt.subplots_adjust(wspace=0.05, right=0.85)
     plt.savefig(f'up/bound{typ}.jpeg', bbox_inches='tight', dpi=900)
     #plt.show()
-
 #diff_p2_range_ver1(typ=2)
+def bound_across_params_3d(path, axx='beta2', axy='a1', p='g2'):
+    df_all = pd.DataFrame()
+    for z in ['bi','con']:
+        for m in ['bi','con']:
+            for y in ['bi']:
+                df_list = [pd.read_csv(f'res_Z{z}_M{m}_Y{y}upbound_newset.csv')] #pd.read_csv(f'res_Z{z}_M{m}_Y{y}upbound.csv'),
+                for df in df_list:
+                    df['Z'] = z
+                    df['M'] = m
+                    df['Y'] = y
+                    df_all = pd.concat([df_all,df], axis=0, ignore_index=True)
+    if path=='P3':                
+        df_all[f'diff_P3_1.0'] = df_all['Ys2'] - df_all['Ys3'] - df_all['Ys2.dprime'] + df_all['Ys3.dprime']
+    df_all['Absolute difference'] = np.abs(df_all[f'diff_{path}_1.0'])
+    df_all['upboundZ'] = df_all[f'uppb_{path}_z_1.0']
+    df_all['upbound1'] = df_all[f'uppb_{path}_1_1.0']
+    df_all['upboundbo'] = df_all[f'uppb_{path}_bo_1.0']
+    df_all['upboundbn'] = df_all[f'uppb_{path}_bn_1.0']
+    df_all['Optimal upper bound'] = df_all[['upboundZ','upbound1','upboundbo','upboundbn']].min(axis=1)
+    df_all['diff_bound_true'] = df_all['Optimal upper bound'] - df_all['Absolute difference']
+    
+    z_m_order = [('con', 'con'), ('con', 'bi'), ('bi', 'con'), ('bi', 'bi')]
+    rho_values = sorted(df_all['rho'].unique())
+    p_values = sorted(df_all[p].unique())
+    cmap = plt.cm.get_cmap('viridis', len(p_values))
+    
+    fig, axes = plt.subplots(4, 4, figsize=(30, 24), subplot_kw={'projection': '3d'})
+    for row, (z, m) in enumerate(z_m_order):
+        for col, rho in enumerate(rho_values):
+            ax = axes[row, col]
+            df_filtered = df_all[(df_all['Z'] == z) & (df_all['M'] == m) & (df_all['rho'] == rho)]
+            df_filtered = df_filtered.dropna(subset=[p, axx, axy, 'diff_bound_true'])
+            
+            if df_filtered.empty:
+                ax.text2D(0.5, 0.5, 'No data', transform=ax.transAxes, ha='center', va='center')
+                #ax.set_title(f'Z={z}, M={m}, rho={rho}')
+                continue
+            
+            
+            for k, val in enumerate(p_values):
+                plane = df_filtered[df_filtered[p] == val]
+                if plane.empty:
+                    continue
+                pivot = plane.pivot(index=axy, columns=axx, values='diff_bound_true')
+                if pivot.empty:
+                    continue
+                X, Y = np.meshgrid(pivot.columns.values, pivot.index.values)
+                Z = pivot.values
+                ax.plot_surface(X, Y, Z, color=cmap(k), alpha=0.45, edgecolor='none', rstride=1, cstride=1)
+            
+            xticks = ax.get_xticks()
+            xticks_new = [tick for tick in xticks if tick in np.unique(df_filtered[axx])]
+            ax.set_xticks(xticks_new)
+            yticks = ax.get_yticks()
+            yticks_new = [tick for tick in yticks if tick in np.unique(df_filtered[axy])]
+            ax.set_yticks(yticks_new)
+            zticks = ax.get_zticks()
+            zticks_new = [round(tick,2) for tick in zticks]
+            ax.set_zticks(zticks_new)
+            ax.set_xlabel(r'$\beta_2$', fontsize=12)
+            ax.set_ylabel(r'$\alpha_1$', fontsize=12)
+            ax.set_zlabel(f'Difference', fontsize=12)
+            #ax.set_title(f'Z={z}, M={m}, rho={rho}', fontsize=11)
+            ax.view_init(elev=25, azim=-25)
+    
+    legend_elements = [Line2D([0], [0], marker='s', color='w', markerfacecolor=cmap(i), markersize=10, label=f'$\gamma_6$ = {p}') for i, p in enumerate(p_values)]
+    # Set column titles (rho values) on top
+    for i, rho_value in enumerate(np.unique(df_all['rho'])):
+        axes[0, i].set_title(f"rho = {rho_value}", fontsize=16, fontweight='bold')
+    row_titles = ["Z continuous, M continuous", "Z continuous, M binary", "Z binary, M continuous", "Z binary, M binary"]
+    for row, title in enumerate(row_titles):
+        fig.text(0.16, 0.83 - row * 0.22, title, va='center', ha='right', rotation='vertical', fontsize=14, fontweight='bold')
+    for ax in axes.flat:
+        ax.tick_params(axis='both', labelsize=12)
+    fig.legend(handles=legend_elements, loc='upper right',  bbox_to_anchor=(0.95, 0.95),  fontsize=12)
+    plt.tight_layout(rect=[0.1, 0, 1, 1], pad=1.0, w_pad=-1, h_pad=0)
+    plt.subplots_adjust(left=0.15, right=0.93, top=0.95, bottom=0.05, wspace=0, hspace=0)
+    plt.savefig(f'up/bound{path}_new.pdf', bbox_inches='tight')
+    #plt.show()
+#bound_across_params_3d(path="P2", axx='beta2', axy='a1', p='g2')
+
+def bound_across_params_2d(conditions = {"rho":0.2, "g6":-1.5, "beta2":1.5}, free = 'a1'):
+    df_all = pd.DataFrame()
+    """for z in ['bi','con']:
+        for m in ['bi','con']:
+            for y in ['bi']:
+                df_list = [pd.read_csv(f'res_Z{z}_M{m}_Y{y}upbound_newset.csv')] #pd.read_csv(f'res_Z{z}_M{m}_Y{y}upbound.csv'),
+                for df in df_list:
+                    df['Z'] = z
+                    df['M'] = m
+                    df['Y'] = y
+                    df_all = pd.concat([df_all,df], axis=0, ignore_index=True)"""
+    
+    df_all = pd.read_csv(f'res_test.csv')
+    df_all['Z'] = df_all['mode.z']
+    df_all['M'] = df_all['mode.m']
+    df_all['Y'] = df_all['mode.y']
+    df_all = df_all[df_all['Y']=='bi']
+    mask = pd.Series(True, index=df_all.index)
+    for col, value in conditions.items():
+        mask &= (df_all[col] == value)
+    df_all = df_all[mask]
+    # 3 bounds
+    df_all[f'abs_diff_P2'] = np.abs(df_all[f'diff_P2_1.0'])
+    df_all[f'abs_diff_P3'] = np.abs(df_all['Ys2'] - df_all['Ys3'] - df_all['Ys2.dprime'] + df_all['Ys3.dprime'])
+    for p in ['P2','P3']:        
+        df_all[f'boundopt_{p}'] = df_all[[f'uppb_{p}_z_1.0',f'uppb_{p}_1_1.0',f'uppb_{p}_bo_1.0',f'uppb_{p}_bn_1.0']].min(axis=1)   
+    df_all['abs_diff_P2P3'] = df_all['abs_diff_P2'] + df_all['abs_diff_P3']
+    df_all['boundopt_P2P3'] = np.abs(df_all['Ys1'] - df_all['Ys3'] - df_all['Ys1.prime'] + df_all['Ys3.dprime'])
+    df_all['upboundopt_P2P3'] = df_all['boundopt_P2'] + df_all['boundopt_P3'] 
+    z_m_order = [('con', 'con'), ('con', 'bi'), ('bi', 'con'), ('bi', 'bi')]
+    # plot    
+    if len(conditions)==3:
+        fig, axes = plt.subplots(4, 3, figsize=(16, 12), sharey=False)
+        for row, (z, m) in enumerate(z_m_order):
+            for col, p in enumerate(['P2','P3','P2P3']):
+                ax = axes[row, col]
+                df_filtered = df_all[(df_all['Z'] == z) & (df_all['M'] == m)]
+                df_filtered = df_filtered.sort_values(free)
+                
+                ax.plot(df_filtered[free], df_filtered[f'abs_diff_{p}'] , color='black', linewidth=1)
+                ax.plot(df_filtered[free], df_filtered[f'boundopt_{p}'] , color='black', linestyle='--', linewidth=1)
+                
+                ax.set_ylim(-0.1, 1.0)
+                if free=='a1' or free=='alpha_1':
+                    ax.set_xlabel(r'$\alpha_1$')
+                elif free=='g6' or free=='gamma_6':
+                    ax.set_xlabel(r'$\gamma_6$')
+                elif free=='g2' or free=='gamma_2':
+                    ax.set_xlabel(r'$\gamma_2$')
+                elif free=='g3' or free=='gamma_3':
+                    ax.set_xlabel(r'$\gamma_3$')
+                elif free=='rho' or free=='r':
+                    ax.set_xlabel(r'$\rho$')
+                elif free=='beta2' or free=='beta_2':
+                    ax.set_xlabel(r'$\beta_2$')
+                ax.set_ylabel('Difference')
+    else:
+        cmap = plt.cm.get_cmap('viridis', len([f'abs_diff_{p}', f'boundopt_{p}']))
+        fig, axes = plt.subplots(4, 3, figsize=(16, 12), subplot_kw={'projection': '3d'})
+        for row, (z, m) in enumerate(z_m_order):
+            for col, p in enumerate(['P2','P3','P2P3']):
+                ax = axes[row, col]
+                df_filtered = df_all[(df_all['Z'] == z) & (df_all['M'] == m)]
+                df_filtered = df_filtered.dropna(subset=[f'{free[0]}', f'{free[1]}', f'abs_diff_{p}', f'boundopt_{p}'])
+                
+                if df_filtered.empty:
+                    ax.text2D(0.5, 0.5, 'No data', transform=ax.transAxes, ha='center', va='center')
+                    continue
+                
+                for k, nplane in enumerate([f'abs_diff_{p}', f'boundopt_{p}']):
+                    plane = df_filtered
+                    if plane.empty:
+                        continue
+                    pivot = plane.pivot(index=f'{free[1]}', columns=f'{free[0]}', values=nplane)
+                    if pivot.empty:
+                        continue
+                    X, Y = np.meshgrid(pivot.columns.values, pivot.index.values)
+                    Z = pivot.values
+                    ax.plot_surface(X, Y, Z, color=cmap(k), alpha=0.45, edgecolor='none', rstride=1, cstride=1)
+                
+                xticks = ax.get_xticks()
+                xticks_new = [tick for tick in xticks if tick in np.unique(df_filtered[f'{free[0]}'])]
+                ax.set_xticks(xticks_new)
+                yticks = ax.get_yticks()
+                yticks_new = [tick for tick in yticks if tick in np.unique(df_filtered[f'{free[1]}'])]
+                ax.set_yticks(yticks_new)
+                zticks = ax.get_zticks()
+                zticks_new = [round(tick,2) for tick in zticks]
+                ax.set_zticks(zticks_new)
+                ax.set_xlabel(f'{free[0]}', fontsize=12)
+                ax.set_ylabel(f'{free[1]}', fontsize=12)
+                ax.set_zlabel(f'Difference', fontsize=12)
+                ax.view_init(elev=25, azim=-25)
+    for i, p_name in enumerate([r'$|\psi_{P_2}^{ne} - \psi_{P_2}^{rt}$|',r'$| \psi_{P_3}^{ne} - \psi_{P_3}^{rt} |$',r'$| \psi_{P_2}^{ne} - \psi_{P_2}^{rt} | + | \psi_{P_3}^{ne} - \psi_{P_3}^{rt} |$']):
+        axes[0, i].set_title(p_name, fontsize=14)
+    row_titles = ["Z continuous, M continuous", "Z continuous, M binary", "Z binary, M continuous", "Z binary, M binary"]
+    for row, title in enumerate(row_titles):
+        fig.text(0, 0.87 - row * 0.24, title, va='center', ha='right', rotation='vertical', fontsize=12, fontweight='bold')
+    plt.tight_layout()
+    #plt.savefig('up/bound_across_params_2d.pdf', bbox_inches='tight')
+    plt.show()
+#bound_across_params_2d(conditions = {"rho":-0.2, "beta2":1.0, "g6":1.5}, free = 'a1')
+#bound_across_params_2d(conditions = {"rho":-0.2, "beta2":1.0, "a1":-0.5}, free = 'g6')
+
+#bound_across_params_2d(conditions = {"rho":-0.2, "beta2":1.5}, free=['g2','a1'])
+#bound_across_params_2d(conditions = {"rho":-0.2, "beta2":1.5, "g2":1.5}, free = 'a1')
+#bound_across_params_2d(conditions = {"rho":-0.2, "beta2":1.5, "a1":1.5}, free = 'g2')
+
+#bound_across_params_2d(conditions = {"rho":-0.2, "g2":1.0}, free = ['a1', 'beta2'])
+#bound_across_params_2d(conditions = {"rho":-0.2, "g2":1.0, 'beta2':1.5}, free = 'a1')
+#bound_across_params_2d(conditions = {"rho":-0.2, "g2":1.0, 'a1':1.5}, free = 'beta2')
+
+"""bound_across_params_2d(conditions = {"rho":-0.2, 'alpha_1':1.5}, free = ['gamma_3', 'beta_2'])
+bound_across_params_2d(conditions = {"rho":-0.2, 'beta_2':1.5}, free = ['gamma_3', 'alpha_1'])
+bound_across_params_2d(conditions = {"rho":-0.2, 'gamma_3':-1.5}, free = ['beta_2', 'alpha_1'])
+bound_across_params_2d(conditions = {"rho":-0.2, 'gamma_3':-1.5, 'beta_2':1.5}, free = 'alpha_1')"""
+
+
+#bound_across_params_2d(conditions = {"gamma_2":1.5, "alpha_1":-1.0, "beta_2":1.5}, free = "gamma_3")
+#bound_across_params_2d(conditions = {"beta_2":1.5, "gamma_2":1.5, "gamma_3":1.5}, free = "alpha_1")
+
+def dis_close_bound_across_param():
+    df_all = pd.read_csv(f'res_test.csv')
+    df_all['Z'] = df_all['mode.z']
+    df_all['M'] = df_all['mode.m']
+    df_all['Y'] = df_all['mode.y']
+    df_all = df_all[df_all['Y']=='bi']
+    df_all[f'abs_diff_P2'] = np.abs(df_all[f'diff_P2_1.0'])
+    df_all[f'abs_diff_P3'] = np.abs(df_all['Ys2'] - df_all['Ys3'] - df_all['Ys2.dprime'] + df_all['Ys3.dprime'])
+    for p in ['P2','P3']:        
+        df_all[f'boundopt_{p}'] = df_all[[f'uppb_{p}_z_1.0',f'uppb_{p}_1_1.0',f'uppb_{p}_bo_1.0',f'uppb_{p}_bn_1.0']].min(axis=1)   
+    df_all['abs_diff_P2P3'] = df_all['abs_diff_P2'] + df_all['abs_diff_P3']
+    df_all['boundopt_P2P3'] = np.abs(df_all['Ys1'] - df_all['Ys3'] - df_all['Ys1.prime'] + df_all['Ys3.dprime'])
+    df_all['upboundopt_P2P3'] = df_all['boundopt_P2'] + df_all['boundopt_P3']
+
+    z_m_order = [('con', 'con'), ('con', 'bi'), ('bi', 'con'), ('bi', 'bi')]
+
+    for sce, (z, m) in enumerate(z_m_order):
+        fig, axes = plt.subplots(4, 3, figsize=(16, 12), sharey=False)
+        df_filtered = df_all[(df_all['Z'] == z) & (df_all['M'] == m)]
+        thresholds = []
+        for col, p in enumerate(['P2','P3','P2P3']):
+            df_filtered['check'] = 0
+            if (p!='P2P3'):
+                threshold = np.quantile(df_filtered[f'boundopt_{p}'] - df_filtered[f'abs_diff_{p}'],0.1)
+                df_filtered.loc[df_filtered[f'boundopt_{p}'] - df_filtered[f'abs_diff_{p}'] <= threshold,'check'] = 1
+            else:
+                threshold = np.quantile(df_filtered[f'abs_diff_{p}'] - df_filtered[f'boundopt_{p}'],0.1)
+                df_filtered.loc[df_filtered[f'abs_diff_{p}'] - df_filtered[f'boundopt_{p}'] <= threshold,'check'] = 1
+            thresholds.append(round(threshold,3))
+            for row, param in enumerate(['alpha_1','beta_2','gamma_2','gamma_3']):
+                ax = axes[row,col]
+                prop = (pd.crosstab(df_filtered[param], df_filtered['check'], normalize='index')
+                        .reindex(columns=[0, 1], fill_value=0))
+                prop.plot(
+                    kind='bar',
+                    stacked=True,
+                    ax=ax,
+                    legend=False)
+                ax.set_xlabel("para")
+                ax.set_ylabel("percent")
+                handles, labels = ax.get_legend_handles_labels()
+        row_titles = [r'$\alpha_1$',r'$\beta_2$',r'$\gamma_2$',r'$\gamma_3$']
+        for row, title in enumerate(row_titles):
+            fig.text(0.08, 0.8 - row * 0.2,  title, va='center', ha='right', fontsize=12, fontweight='bold')
+        for i, p_name in enumerate([r'$|\psi_{P_2}^{ne} - \psi_{P_2}^{rt}$|',r'$| \psi_{P_3}^{ne} - \psi_{P_3}^{rt} |$',r'$| \psi_{P_2}^{ne} - \psi_{P_2}^{rt} | + | \psi_{P_3}^{ne} - \psi_{P_3}^{rt} |$']):
+            axes[0, i].set_title(p_name + f' threshold{thresholds[i]}', fontsize=14)
+        fig.legend(
+            handles,
+            labels,
+            title="Value",
+            loc="center right"
+        )
+        titles = ["Z continuous, M continuous", "Z continuous, M binary", "Z binary, M continuous", "Z binary, M binary"]
+        fig.suptitle(titles[sce], fontsize=16)
+        plt.show()
+
+dis_close_bound_across_param()
